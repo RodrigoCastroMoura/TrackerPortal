@@ -8,10 +8,14 @@ A comprehensive vehicle tracking management system built as a web application fo
 
 **Key Features**:
 - Customer and vehicle registration management
-- Real-time vehicle tracking and monitoring
+- Real-time vehicle tracking and monitoring with interactive map (Leaflet + OpenStreetMap)
 - GPS tracker testing and validation interface
 - Role-based access control (Admin/User)
 - Dark/light theme support with Material Design 3 aesthetics
+
+**Important Notes**:
+- **Map Visualization**: Sistema usa dados reais da API quando disponíveis. Quando API retorna localização null (sem dados GPS), usa coordenadas de demonstração em Brasília para visualização
+- **Tracking Logic**: Verifica dados reais com `!= null` (não com truthiness) para aceitar coordenadas válidas com valor 0 (equador/meridiano)
 
 ## User Preferences
 
