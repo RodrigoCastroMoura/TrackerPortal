@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -29,6 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const userFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -37,6 +42,7 @@ const userFormSchema = z.object({
   role: z.enum(["admin", "user"]),
   status: z.enum(["active", "inactive"]),
   password: z.string().optional(),
+  permissions: z.array(z.string()).optional(),
 });
 
 type UserFormData = z.infer<typeof userFormSchema>;
@@ -57,6 +63,21 @@ export function UserFormDialog({
   const { toast } = useToast();
   const isEditing = !!userId;
 
+  // Buscar permissões disponíveis
+  const { 
+    data: permissionsData, 
+    isLoading: isLoadingPermissions,
+    error: permissionsError,
+    refetch: refetchPermissions
+  } = useQuery<{ permissions: string[] }>({
+    queryKey: ["/api/permissions"],
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  const availablePermissions = permissionsData?.permissions || [];
+
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -66,6 +87,7 @@ export function UserFormDialog({
       role: "user",
       status: "active",
       password: "",
+      permissions: [],
     },
   });
 
@@ -78,6 +100,7 @@ export function UserFormDialog({
         role: initialData.role || "user",
         status: initialData.status || "active",
         password: "",
+        permissions: initialData.permissions || [],
       });
     } else {
       form.reset({
@@ -87,6 +110,7 @@ export function UserFormDialog({
         role: "user",
         status: "active",
         password: "",
+        permissions: [],
       });
     }
   }, [initialData, form]);
@@ -263,6 +287,86 @@ export function UserFormDialog({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="permissions"
+              render={() => (
+                <FormItem>
+                  <div className="mb-4">
+                    <FormLabel className="text-base">Permissões de Acesso</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione as permissões que este usuário terá no sistema
+                    </p>
+                  </div>
+                  <ScrollArea className="h-[200px] rounded-md border p-4">
+                    {isLoadingPermissions ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Carregando permissões...</p>
+                        </div>
+                      </div>
+                    ) : permissionsError ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="flex items-center justify-between">
+                          <span>Erro ao carregar permissões</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refetchPermissions()}
+                            data-testid="button-retry-permissions"
+                          >
+                            Tentar novamente
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    ) : availablePermissions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhuma permissão disponível</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availablePermissions.map((permission) => (
+                          <FormField
+                            key={permission}
+                            control={form.control}
+                            name="permissions"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={permission}
+                                  className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(permission)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), permission])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== permission
+                                              )
+                                            );
+                                      }}
+                                      data-testid={`checkbox-permission-${permission}`}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {permission}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter>
               <Button
                 type="button"
@@ -274,11 +378,20 @@ export function UserFormDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={
+                  createMutation.isPending || 
+                  updateMutation.isPending || 
+                  isLoadingPermissions || 
+                  !!permissionsError
+                }
                 data-testid="button-save-user"
               >
                 {createMutation.isPending || updateMutation.isPending
                   ? "Salvando..."
+                  : isLoadingPermissions
+                  ? "Carregando..."
+                  : permissionsError
+                  ? "Erro ao carregar permissões"
                   : isEditing
                   ? "Atualizar"
                   : "Criar Usuário"}
