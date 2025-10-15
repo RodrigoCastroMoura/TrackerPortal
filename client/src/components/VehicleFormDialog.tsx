@@ -84,32 +84,36 @@ export function VehicleFormDialog({
   });
 
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        customer_id: initialData.customer_id || "",
-        plate: initialData.plate || "",
-        brand: initialData.brand || "",
-        model: initialData.model || "",
-        year: initialData.year || "",
-        color: initialData.color || "",
-        chassis: initialData.chassis || "",
-        tracker_serial: initialData.tracker_serial || "",
-        status: initialData.status || "active",
-      });
-    } else {
-      form.reset({
-        customer_id: "",
-        plate: "",
-        brand: "",
-        model: "",
-        year: "",
-        color: "",
-        chassis: "",
-        tracker_serial: "",
-        status: "active",
-      });
+    if (open) {
+      if (initialData) {
+        // Map API fields to form fields (API uses different field names)
+        const data: any = initialData;
+        form.reset({
+          customer_id: data.customer_id || data.id_cliente || "",
+          plate: data.dsplaca || data.plate || "",
+          brand: data.dsmarca || data.brand || "",
+          model: data.dsmodelo || data.model || "",
+          year: data.dsano || data.year || "",
+          color: data.dscor || data.color || "",
+          chassis: data.dschassi || data.chassis || "",
+          tracker_serial: data.IMEI || data.tracker_serial || "",
+          status: data.status || "active",
+        });
+      } else {
+        form.reset({
+          customer_id: "",
+          plate: "",
+          brand: "",
+          model: "",
+          year: "",
+          color: "",
+          chassis: "",
+          tracker_serial: "",
+          status: "active",
+        });
+      }
     }
-  }, [initialData, form]);
+  }, [open, initialData, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: VehicleFormData) => {

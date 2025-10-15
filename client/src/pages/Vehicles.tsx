@@ -72,17 +72,17 @@ export default function Vehicles() {
     );
   }
 
-  const transformedVehicles: VehicleWithCustomerName[] = vehicles?.map(vehicle => ({
-    id: vehicle.id,
-    plate: vehicle.plate,
-    brand: vehicle.brand,
-    model: vehicle.model,
-    year: vehicle.year,
-    customerName: "-",
-    trackerSerial: vehicle.tracker_serial || "-",
-    status: vehicle.status,
+  const transformedVehicles: VehicleWithCustomerName[] = (vehicles && Array.isArray(vehicles)) ? vehicles.map((vehicle: any) => ({
+    id: vehicle.id || "",
+    plate: vehicle.dsplaca || vehicle.plate || "N/A",
+    brand: vehicle.dsmarca || vehicle.brand || "N/A",
+    model: vehicle.dsmodelo || vehicle.model || "N/A",
+    year: vehicle.dsano || vehicle.year || "N/A",
+    customerName: vehicle.customer_name || "-",
+    trackerSerial: vehicle.IMEI || vehicle.tracker_serial || "-",
+    status: vehicle.status || "active",
     isTracking: vehicle.is_tracking || false,
-  })) || [];
+  })) : [];
 
   const handleAdd = () => {
     setSelectedVehicle(null);
