@@ -445,11 +445,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If permissions were provided, convert names to IDs and add them
-      if (permissions && permissions.length > 0 && response.data?.id) {
+      if (permissions && permissions.length > 0 && (response.data as any)?.id) {
         // Get available permissions to map names to IDs
         const permsResponse = await apiClient.getPermissions(token);
         if (!permsResponse.error && permsResponse.data) {
-          const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+          const permissionMap = new Map((permsResponse.data as any[]).map((p: any) => [p.name, p.id]));
           const permissionIds = permissions
             .map((name: string) => permissionMap.get(name))
             .filter((id: string | undefined) => id !== undefined);
@@ -457,11 +457,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (permissionIds.length > 0) {
             // Use appropriate endpoint based on user role
             const managePermissionsFn = userData.role === "admin" 
-              ? apiClient.manageAdminPermissions 
-              : apiClient.manageUserPermissions;
+              ? apiClient.manageAdminPermissions.bind(apiClient)
+              : apiClient.manageUserPermissions.bind(apiClient);
             
             const permResponse = await managePermissionsFn(
-              response.data.id, 
+              (response.data as any).id, 
               { permissions: permissionIds, action: "add" }, 
               token
             );
@@ -531,12 +531,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get available permissions to map names to IDs
         const permsResponse = await apiClient.getPermissions(token);
         if (!permsResponse.error && permsResponse.data) {
-          const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+          const permissionMap = new Map((permsResponse.data as any[]).map((p: any) => [p.name, p.id]));
           
           // Use appropriate endpoint based on user role
           const managePermissionsFn = req.body.role === "admin" 
-            ? apiClient.manageAdminPermissions 
-            : apiClient.manageUserPermissions;
+            ? apiClient.manageAdminPermissions.bind(apiClient)
+            : apiClient.manageUserPermissions.bind(apiClient);
           
           // Remove existing permissions (already as IDs in the response)
           if (currentUserResponse.data?.permissions?.length > 0) {

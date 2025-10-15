@@ -71,12 +71,14 @@ Preferred communication style: Simple, everyday language.
 - Error handling and response normalization
 - Support for login, customer management, vehicle management, and tracker operations
 
-**Permission Management Limitations**:
-- External API only supports permission management for users with role="admin"
-- Endpoint `/api/permissions/admin/:id/permissions` is available for admins
-- Endpoint `/api/permissions/user/:id/permissions` does NOT exist (returns 404)
-- UI conditionally shows permission selection only when role="admin" is selected
-- Regular users (role="user") cannot have granular permissions assigned through this system
+**Permission Management**:
+- UI now allows permission selection for both admin and user roles
+- Local backend supports permission management for both roles:
+  - Uses `/api/permissions/admin/:id/permissions` for admin role
+  - Uses `/api/permissions/user/:id/permissions` for user role
+- Frontend displays permission checkboxes for all user types during creation/editing
+- Permissions are normalized between IDs (API format) and names (UI display) bidirectionally
+- Note: External API behavior for user permissions endpoint may differ from admin endpoint
 
 **API Data Mapping**:
 - External API uses Portuguese field names that differ from internal schema
