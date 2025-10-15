@@ -316,19 +316,18 @@ export function UserFormDialog({
               />
             </div>
 
-            {/* Show permissions only for admin role */}
-            {form.watch("role") === "admin" && (
-              <FormField
-                control={form.control}
-                name="permissions"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel className="text-base">Permissões de Acesso</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Selecione as permissões que este administrador terá no sistema
-                      </p>
-                    </div>
+            {/* Permissions for all user types */}
+            <FormField
+              control={form.control}
+              name="permissions"
+              render={() => (
+                <FormItem>
+                  <div className="mb-4">
+                    <FormLabel className="text-base">Permissões de Acesso</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione as permissões que este usuário terá no sistema
+                    </p>
+                  </div>
                     <ScrollArea className="h-[200px] rounded-md border p-4">
                       {isLoadingPermissions ? (
                         <div className="flex items-center justify-center h-full">
@@ -397,7 +396,6 @@ export function UserFormDialog({
                   </FormItem>
                 )}
               />
-            )}
 
             <DialogFooter>
               <Button
