@@ -243,6 +243,10 @@ class ApiClient {
     return this.post(`/api/permissions/admin/${adminId}/permissions`, data, token);
   }
 
+  async manageUserPermissions(userId: string, data: { permissions: string[]; action: "add" | "remove" }, token?: string) {
+    return this.post(`/api/permissions/user/${userId}/permissions`, data, token);
+  }
+
   // Tracking endpoints
   async getVehicleLocations(params?: {
     status?: string;

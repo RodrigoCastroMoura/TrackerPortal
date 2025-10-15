@@ -78,6 +78,24 @@ export function UserFormDialog({
 
   const availablePermissions = (permissionsData || []).map(p => p.name);
 
+  // Helper function to normalize permissions (convert IDs to names if needed)
+  const normalizePermissions = (permissions: string[] | undefined): string[] => {
+    if (!permissions || !permissionsData) return [];
+    
+    // Create ID to name mapping
+    const idToName = new Map(permissionsData.map(p => [p.id, p.name]));
+    
+    // Convert any IDs to names
+    return permissions.map(perm => {
+      // If it's an ID, convert to name
+      if (idToName.has(perm)) {
+        return idToName.get(perm)!;
+      }
+      // Otherwise assume it's already a name
+      return perm;
+    }).filter(perm => availablePermissions.includes(perm)); // Only keep valid permissions
+  };
+
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -92,9 +110,9 @@ export function UserFormDialog({
   });
 
   useEffect(() => {
-    if (initialData) {
-      console.log("[DEBUG] UserFormDialog initialData:", initialData);
-      console.log("[DEBUG] Permissions from initialData:", initialData.permissions);
+    if (initialData && permissionsData) {
+      const normalizedPermissions = normalizePermissions(initialData.permissions);
+      
       form.reset({
         name: initialData.name || "",
         email: initialData.email || "",
@@ -102,9 +120,9 @@ export function UserFormDialog({
         role: initialData.role || "user",
         status: initialData.status || "active",
         password: "",
-        permissions: initialData.permissions || [],
+        permissions: normalizedPermissions,
       });
-    } else {
+    } else if (!initialData) {
       form.reset({
         name: "",
         email: "",
@@ -115,7 +133,7 @@ export function UserFormDialog({
         permissions: [],
       });
     }
-  }, [initialData, form]);
+  }, [initialData, form, permissionsData]);
 
   const createMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
@@ -289,85 +307,88 @@ export function UserFormDialog({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="permissions"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Permissões de Acesso</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Selecione as permissões que este usuário terá no sistema
-                    </p>
-                  </div>
-                  <ScrollArea className="h-[200px] rounded-md border p-4">
-                    {isLoadingPermissions ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">Carregando permissões...</p>
+            {/* Show permissions only for admin role */}
+            {form.watch("role") === "admin" && (
+              <FormField
+                control={form.control}
+                name="permissions"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">Permissões de Acesso</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Selecione as permissões que este administrador terá no sistema
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[200px] rounded-md border p-4">
+                      {isLoadingPermissions ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Carregando permissões...</p>
+                          </div>
                         </div>
-                      </div>
-                    ) : permissionsError ? (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription className="flex items-center justify-between">
-                          <span>Erro ao carregar permissões</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => refetchPermissions()}
-                            data-testid="button-retry-permissions"
-                          >
-                            Tentar novamente
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    ) : availablePermissions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhuma permissão disponível</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {availablePermissions.map((permission) => (
-                          <FormField
-                            key={permission}
-                            control={form.control}
-                            name="permissions"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={permission}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(permission)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...(field.value || []), permission])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== permission
-                                              )
-                                            );
-                                      }}
-                                      data-testid={`checkbox-permission-${permission}`}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {permission}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      ) : permissionsError ? (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription className="flex items-center justify-between">
+                            <span>Erro ao carregar permissões</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => refetchPermissions()}
+                              data-testid="button-retry-permissions"
+                            >
+                              Tentar novamente
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      ) : availablePermissions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma permissão disponível</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {availablePermissions.map((permission) => (
+                            <FormField
+                              key={permission}
+                              control={form.control}
+                              name="permissions"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={permission}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(permission)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...(field.value || []), permission])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== permission
+                                                )
+                                              );
+                                        }}
+                                        data-testid={`checkbox-permission-${permission}`}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                      {permission}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button

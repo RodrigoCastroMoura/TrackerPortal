@@ -377,9 +377,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      // Debug: log user data with permissions
-      console.log("[DEBUG] GET /api/users response:", JSON.stringify(response.data, null, 2));
-      
       res.json(response.data);
     } catch (error) {
       console.error("Get users error:", error);
@@ -434,7 +431,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const token = (req as any).token;
       
-      const userData = { ...req.body };
+      const { permissions, ...userData } = req.body;
+      
       if (userData.document) {
         userData.cpf = userData.document;
         delete userData.document;
@@ -444,6 +442,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
+      }
+      
+      // If permissions were provided and user is admin, convert names to IDs and add them
+      if (permissions && permissions.length > 0 && response.data?.id && userData.role === "admin") {
+        // Get available permissions to map names to IDs
+        const permsResponse = await apiClient.getPermissions(token);
+        if (!permsResponse.error && permsResponse.data) {
+          const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+          const permissionIds = permissions
+            .map((name: string) => permissionMap.get(name))
+            .filter((id: string | undefined) => id !== undefined);
+          
+          if (permissionIds.length > 0) {
+            const permResponse = await apiClient.manageAdminPermissions(
+              response.data.id, 
+              { permissions: permissionIds, action: "add" }, 
+              token
+            );
+            
+            if (permResponse.error) {
+              console.error("Error adding permissions to admin:", permResponse.error);
+            }
+          }
+        }
       }
       
       res.status(201).json(response.data);
@@ -457,7 +479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const token = (req as any).token;
       
-      const userData = { ...req.body };
+      const { permissions, ...userData } = req.body;
+      
       if (userData.document !== undefined) {
         userData.cpf = userData.document;
         delete userData.document;
@@ -467,6 +490,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
+      }
+      
+      // If permissions were provided and user is admin, update them
+      if (permissions !== undefined) {
+        const currentUserResponse = await apiClient.getUser(req.params.id, token);
+        const isAdmin = currentUserResponse.data?.role === "admin";
+        
+        if (isAdmin) {
+          // Get available permissions to map names to IDs
+          const permsResponse = await apiClient.getPermissions(token);
+          if (!permsResponse.error && permsResponse.data) {
+            const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+            
+            // Remove existing permissions (already as IDs in the response)
+            if (!currentUserResponse.error && currentUserResponse.data?.permissions?.length > 0) {
+              const removeResponse = await apiClient.manageAdminPermissions(
+                req.params.id, 
+                { permissions: currentUserResponse.data.permissions, action: "remove" }, 
+                token
+              );
+              if (removeResponse.error) {
+                console.error("Error removing permissions:", removeResponse.error);
+              }
+            }
+            
+            // Add new permissions (convert names to IDs)
+            if (permissions.length > 0) {
+              const permissionIds = permissions
+                .map((name: string) => permissionMap.get(name))
+                .filter((id: string | undefined) => id !== undefined);
+              
+              if (permissionIds.length > 0) {
+                const addResponse = await apiClient.manageAdminPermissions(
+                  req.params.id, 
+                  { permissions: permissionIds, action: "add" }, 
+                  token
+                );
+                if (addResponse.error) {
+                  console.error("Error adding permissions:", addResponse.error);
+                }
+              }
+            }
+          }
+        }
       }
       
       res.json(response.data);
