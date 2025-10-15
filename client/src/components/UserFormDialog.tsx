@@ -102,12 +102,6 @@ export function UserFormDialog({
       })
       .filter((perm): perm is string => perm !== null);
     
-    console.log('[UserFormDialog] Normalizing permissions:', {
-      input: permissions,
-      output: normalized,
-      idToNameMap: Array.from(idToName.entries()),
-    });
-    
     return normalized;
   };
 
