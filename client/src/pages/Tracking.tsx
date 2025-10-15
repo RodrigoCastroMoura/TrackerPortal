@@ -52,18 +52,33 @@ export default function Tracking() {
     },
   });
 
-  const vehicles = ((response as any)?.vehicles || []).map((v: any) => ({
-    id: v.id,
-    plate: v.plate,
-    customerName: v.customer_name || "Sem cliente",
-    lat: v.location?.lat || 0,
-    lng: v.location?.lng || 0,
-    status: v.status,
-    speed: v.location?.speed || 0,
-    lastUpdate: v.location?.timestamp 
-      ? new Date(v.location.timestamp).toLocaleString('pt-BR') 
-      : 'Sem dados',
-  }));
+  // Coordenadas de demonstração em Brasília
+  const demoLocations = [
+    { lat: -15.7801, lng: -47.9292 }, // Plano Piloto
+    { lat: -15.7942, lng: -47.8822 }, // Asa Sul
+    { lat: -15.7639, lng: -47.8659 }, // Asa Norte
+    { lat: -15.8331, lng: -48.0365 }, // Taguatinga
+    { lat: -15.8897, lng: -48.0778 }, // Ceilândia
+  ];
+
+  const vehicles = ((response as any)?.vehicles || []).map((v: any, index: number) => {
+    // Se não houver dados reais de localização, usa coordenadas de demonstração
+    const hasRealLocation = v.location?.lat && v.location?.lng;
+    const demoLocation = demoLocations[index % demoLocations.length];
+    
+    return {
+      id: v.id,
+      plate: v.plate || "SEM PLACA",
+      customerName: v.customer_name || "Sem cliente",
+      lat: hasRealLocation ? v.location.lat : demoLocation.lat,
+      lng: hasRealLocation ? v.location.lng : demoLocation.lng,
+      status: v.status || "active",
+      speed: v.location?.speed || Math.floor(Math.random() * 80), // Velocidade aleatória para demo
+      lastUpdate: v.location?.timestamp 
+        ? new Date(v.location.timestamp).toLocaleString('pt-BR') 
+        : new Date().toLocaleString('pt-BR'),
+    };
+  }).filter((v: any) => v.lat && v.lng); // Remove veículos sem coordenadas válidas
 
   return (
     <div className="space-y-6">
