@@ -103,10 +103,37 @@ Preferred communication style: Simple, everyday language.
 - `/teste-rastreador` - Tracker device testing
 
 **API Routes** (server-side):
+
+*Authentication*:
 - `POST /api/auth/login` - User authentication
 - `GET /api/auth/me` - Current user session
+
+*Customer & Vehicle Management*:
 - `GET /api/customers` - Customer list (proxied)
+- `POST /api/customers` - Create customer (proxied)
+- `PUT /api/customers/:id` - Update customer (proxied)
+- `DELETE /api/customers/:id` - Delete customer (proxied)
 - `GET /api/vehicles` - Vehicle list (proxied)
+- `POST /api/vehicles` - Create vehicle (proxied)
+- `PUT /api/vehicles/:id` - Update vehicle (proxied)
+- `DELETE /api/vehicles/:id` - Delete vehicle (proxied)
+
+*User Management*:
+- `GET /api/users` - User list (proxied)
+- `POST /api/users` - Create user (proxied)
+- `PUT /api/users/:id` - Update user (proxied)
+- `DELETE /api/users/:id` - Delete user (proxied)
+
+*Vehicle Tracking*:
+- `GET /api/tracking/vehicles` - List all vehicles with real-time locations
+- `GET /api/tracking/vehicles/:id/location` - Get current location for specific vehicle
+- `GET /api/tracking/vehicles/:id/history` - Get location history (query: start_date, end_date)
+- `GET /api/tracking/vehicles/:id/route` - Get traveled route (query: start_date, end_date)
+
+*Reports*:
+- `GET /api/reports/vehicles/:id` - Generate vehicle report (query: start_date, end_date, type)
+
+*Statistics*:
 - `GET /api/stats/dashboard` - Dashboard statistics (proxied)
 
 ## External Dependencies
