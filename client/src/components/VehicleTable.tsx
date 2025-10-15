@@ -45,9 +45,9 @@ export function VehicleTable({
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
-      vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())
+      (vehicle.plate || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      (vehicle.customerName || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      (vehicle.model || '').toLowerCase().includes((searchTerm || '').toLowerCase())
   );
 
   return (

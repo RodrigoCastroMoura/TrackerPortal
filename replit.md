@@ -50,9 +50,11 @@ Preferred communication style: Simple, everyday language.
 
 **Authentication Flow**:
 1. User credentials validated against external tracker API
-2. Successful login creates local session with 24-hour expiration
-3. API tokens stored in session for subsequent external API calls
-4. User data cached locally to reduce external API dependency
+2. Successful login receives `access_token` and `refresh_token` from external API
+3. Access token stored in browser localStorage as "auth_token"
+4. All API requests include `Authorization: Bearer <token>` header
+5. Session persists across page reloads via localStorage
+6. User data cached locally to reduce external API dependency
 
 **Data Management Strategy**:
 - Local PostgreSQL database for session storage and user caching
@@ -166,11 +168,12 @@ Preferred communication style: Simple, everyday language.
 
 **Authentication Flow**:
 1. Frontend sends credentials to `/api/auth/login`
-2. Server validates against external tracker API
-3. On success, creates local session with API tokens
-4. Returns session token to frontend
-5. Subsequent requests use session token for local auth
-6. Server uses cached API token for external requests
+2. Server validates against external tracker API (receives `access_token`)
+3. Server stores token in PostgreSQL session table and returns to frontend
+4. Frontend stores token in localStorage as "auth_token"
+5. All subsequent requests include `Authorization: Bearer <token>` header
+6. Server validates token and uses it for external API proxy calls
+7. Session persists across reloads via localStorage token
 
 **Data Fetching Pattern**:
 - TanStack Query manages all server state

@@ -27,9 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, isLoading, error } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const res = await fetch("/api/auth/me", {
+        headers,
         credentials: "include",
       });
+      
       if (res.status === 401) {
         return null;
       }
@@ -51,11 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, error]);
 
   const loginMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/auth/login", { email, password });
+    mutationFn: async ({ identifier, password }: { identifier: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/auth/login", { identifier, password });
       return await res.json();
     },
     onSuccess: (data) => {
+      // Salva o token no localStorage
+      if (data.token) {
+        localStorage.setItem("auth_token", data.token);
+      }
       queryClient.setQueryData(["/api/auth/me"], data.user);
       setLocation("/");
     },
@@ -66,14 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      // Remove o token do localStorage
+      localStorage.removeItem("auth_token");
       queryClient.setQueryData(["/api/auth/me"], null);
       queryClient.clear();
       setLocation("/login");
     },
   });
 
-  const login = async (email: string, password: string) => {
-    await loginMutation.mutateAsync({ email, password });
+  const login = async (identifier: string, password: string) => {
+    await loginMutation.mutateAsync({ identifier, password });
   };
 
   const logout = async () => {

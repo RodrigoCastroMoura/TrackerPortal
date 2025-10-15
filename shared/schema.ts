@@ -45,8 +45,8 @@ export type UserCache = typeof userCache.$inferSelect;
 
 // Schema de login
 export const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+  identifier: z.string().min(1, "Identificador é obrigatório"),
+  password: z.string().min(1, "Senha é obrigatória"),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;

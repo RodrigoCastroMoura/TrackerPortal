@@ -9,9 +9,11 @@ interface VehicleWithCustomerName extends Omit<ApiVehicle, 'customer_id' | 'colo
 }
 
 export default function Vehicles() {
-  const { data: vehicles, isLoading, error } = useQuery<ApiVehicle[]>({
+  const { data: response, isLoading, error } = useQuery<{ vehicles: ApiVehicle[] | null }>({
     queryKey: ["/api/vehicles"],
   });
+  
+  const vehicles = response?.vehicles;
 
   if (isLoading) {
     return (

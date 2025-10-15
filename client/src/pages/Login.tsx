@@ -16,10 +16,10 @@ export default function Login() {
     }
   }, [user, setLocation]);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (identifier: string, password: string) => {
     try {
       setLoginError(null);
-      await login(email, password);
+      await login(identifier, password);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro ao fazer login";
       setLoginError(errorMessage);

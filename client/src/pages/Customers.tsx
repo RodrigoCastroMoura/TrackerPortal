@@ -9,9 +9,11 @@ interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_d
 }
 
 export default function Customers() {
-  const { data: customers, isLoading, error } = useQuery<ApiCustomer[]>({
+  const { data: response, isLoading, error } = useQuery<{ customers: ApiCustomer[] | null }>({
     queryKey: ["/api/customers"],
   });
+  
+  const customers = response?.customers;
 
   if (isLoading) {
     return (

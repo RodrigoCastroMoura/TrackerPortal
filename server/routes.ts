@@ -31,16 +31,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de login
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
-      const { email, password } = loginSchema.parse(req.body);
+      const { identifier, password } = loginSchema.parse(req.body);
 
       // Faz login na API externa
-      const response = await apiClient.login(email, password);
+      const response = await apiClient.login(identifier, password);
 
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
       }
 
-      const { token, refresh_token, user } = response.data!;
+      const { access_token, refresh_token, user } = response.data!;
 
       // Cria sessão no banco local
       const expiresAt = new Date();
@@ -50,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         email: user.email,
         role: user.role,
-        token,
+        token: access_token,
         refreshToken: refresh_token,
         expiresAt,
       });
@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.cacheUser({
         id: user.id,
         email: user.email,
-        name: user.name || email,
+        name: user.name || user.email || identifier,
         document: user.document,
         role: user.role,
         status: user.status || "active",
@@ -67,16 +67,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json({
-        session: {
-          id: session.id,
-          token: session.token,
-          expiresAt: session.expiresAt,
-        },
+        token: session.token,
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          permissions: user.permissions,
         },
       });
     } catch (error) {

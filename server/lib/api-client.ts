@@ -78,10 +78,10 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(email: string, password: string) {
-    return this.post<{ token: string; refresh_token?: string; user: any }>(
+  async login(identifier: string, password: string) {
+    return this.post<{ access_token: string; refresh_token?: string; user: any }>(
       "/api/auth/login",
-      { email, password }
+      { identifier, password }
     );
   }
 
