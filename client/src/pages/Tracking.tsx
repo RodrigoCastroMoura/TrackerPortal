@@ -63,7 +63,7 @@ export default function Tracking() {
 
   const vehicles = ((response as any)?.vehicles || []).map((v: any, index: number) => {
     // Se não houver dados reais de localização, usa coordenadas de demonstração
-    const hasRealLocation = v.location?.lat && v.location?.lng;
+    const hasRealLocation = v.location?.lat != null && v.location?.lng != null;
     const demoLocation = demoLocations[index % demoLocations.length];
     
     return {
@@ -73,12 +73,12 @@ export default function Tracking() {
       lat: hasRealLocation ? v.location.lat : demoLocation.lat,
       lng: hasRealLocation ? v.location.lng : demoLocation.lng,
       status: v.status || "active",
-      speed: v.location?.speed || Math.floor(Math.random() * 80), // Velocidade aleatória para demo
+      speed: v.location?.speed != null ? v.location.speed : Math.floor(Math.random() * 80),
       lastUpdate: v.location?.timestamp 
         ? new Date(v.location.timestamp).toLocaleString('pt-BR') 
         : new Date().toLocaleString('pt-BR'),
     };
-  }).filter((v: any) => v.lat && v.lng); // Remove veículos sem coordenadas válidas
+  }).filter((v: any) => v.lat != null && v.lng != null); // Remove veículos sem coordenadas válidas
 
   return (
     <div className="space-y-6">
