@@ -14,7 +14,9 @@ export default function TrackerTest() {
   const { data: locationData, isLoading, error } = useQuery({
     queryKey: selectedVehicleId ? [`/api/tracking/vehicles/${selectedVehicleId}/location`] : [],
     enabled: !!selectedVehicleId,
-    refetchInterval: 3000, // Atualiza a cada 3 segundos
+    refetchInterval: false, // Desabilita polling automático para respeitar rate limit
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const handleSearch = () => {
@@ -27,10 +29,10 @@ export default function TrackerTest() {
     id: (locationData as any).vehicle_id,
     plate: (locationData as any).plate,
     customerName: "Teste de Rastreador",
-    lat: (locationData as any).location?.lat || 0,
-    lng: (locationData as any).location?.lng || 0,
+    lat: (locationData as any).location?.lat != null ? (locationData as any).location.lat : -15.7939,
+    lng: (locationData as any).location?.lng != null ? (locationData as any).location.lng : -47.8828,
     status: "active" as const,
-    speed: (locationData as any).location?.speed || 0,
+    speed: (locationData as any).location?.speed != null ? (locationData as any).location.speed : 0,
     lastUpdate: (locationData as any).location?.timestamp 
       ? new Date((locationData as any).location.timestamp).toLocaleString('pt-BR') 
       : 'Sem dados',
