@@ -2,7 +2,7 @@
 
 ## 📋 Contexto do Sistema
 
-Este é um portal de rastreamento veicular que se comunica com uma API externa em `https://tracker-api-rodrigocastrom1.replit.app`. O sistema já possui autenticação, CRUD de clientes/veículos/usuários e interfaces visuais prontas, mas falta a integração real dos endpoints de rastreamento.
+Este é um portal de rastreamento veicular que se comunica com uma API externa em `https://tracker-api-rodrigocastrom1.replit.app`. O sistema já possui autenticação, CRUD de clientes/veículos/usuários e interfaces visuais prontas. Falta apenas a integração real dos endpoints de rastreamento para visualização no mapa.
 
 ---
 
@@ -11,7 +11,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 ### 1️⃣ **RASTREAMENTO EM TEMPO REAL**
 
 #### `GET /api/tracking/vehicles`
-**Descrição:** Retorna lista de todos os veículos com última localização conhecida  
+**Descrição:** Retorna lista de todos os veículos com última localização conhecida para visualização no mapa  
 **Autenticação:** Bearer Token  
 **Query Params:**
 - `status` (opcional): "active" | "blocked" | "idle"
@@ -80,7 +80,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 ---
 
 #### `GET /api/tracking/vehicles/:id/history`
-**Descrição:** Retorna histórico de localizações do veículo  
+**Descrição:** Retorna histórico de localizações do veículo para visualização de trajeto  
 **Autenticação:** Bearer Token  
 **Query Params:**
 - `start_date` (obrigatório): data início (ISO 8601)
@@ -103,6 +103,13 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
       "speed": 45,
       "heading": 180,
       "timestamp": "2024-10-15T14:30:00Z"
+    },
+    {
+      "lat": -23.5510,
+      "lng": -46.6340,
+      "speed": 50,
+      "heading": 180,
+      "timestamp": "2024-10-15T14:35:00Z"
     }
   ],
   "total_distance": 125.5,
@@ -115,7 +122,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 ---
 
 #### `GET /api/tracking/vehicles/:id/route`
-**Descrição:** Retorna rota/trajeto otimizado do veículo  
+**Descrição:** Retorna rota/trajeto otimizado do veículo para desenhar no mapa  
 **Autenticação:** Bearer Token  
 **Query Params:**
 - `start_date` (obrigatório): data início
@@ -150,109 +157,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 
 ---
 
-### 2️⃣ **TESTE DE RASTREADOR**
-
-#### `POST /api/tracker/command`
-**Descrição:** Envia comando para um rastreador  
-**Autenticação:** Bearer Token  
-
-**Request Body:**
-```json
-{
-  "tracker_serial": "TRK001",
-  "command": "GET_LOCATION",
-  "params": {}
-}
-```
-
-**Comandos Disponíveis:**
-- `GET_LOCATION` - Solicita localização atual
-- `LOCK_VEHICLE` - Bloqueia o veículo
-- `UNLOCK_VEHICLE` - Desbloqueia o veículo
-- `GET_STATUS` - Status do rastreador
-- `GET_BATTERY` - Nível de bateria
-- `TEST_CONNECTION` - Testa conectividade
-- `REBOOT` - Reinicia o dispositivo
-
-**Response Example:**
-```json
-{
-  "command_id": "cmd123",
-  "tracker_serial": "TRK001",
-  "command": "GET_LOCATION",
-  "status": "sent",
-  "sent_at": "2024-10-15T14:30:00Z",
-  "response": {
-    "status": "success",
-    "data": {
-      "lat": -23.5505,
-      "lng": -46.6333,
-      "timestamp": "2024-10-15T14:30:05Z"
-    },
-    "received_at": "2024-10-15T14:30:05Z"
-  }
-}
-```
-
----
-
-#### `GET /api/tracker/:serial/status`
-**Descrição:** Status atual do rastreador  
-**Autenticação:** Bearer Token  
-
-**Response Example:**
-```json
-{
-  "tracker_serial": "TRK001",
-  "vehicle_id": "v1",
-  "vehicle_plate": "ABC-1234",
-  "online": true,
-  "battery": 85,
-  "signal_strength": 4,
-  "firmware_version": "2.4.1",
-  "last_communication": "2024-10-15T14:30:00Z",
-  "gps_status": "fixed",
-  "gsm_status": "connected"
-}
-```
-
----
-
-#### `GET /api/tracker/:serial/logs`
-**Descrição:** Logs de comunicação do rastreador  
-**Autenticação:** Bearer Token  
-**Query Params:**
-- `limit` (opcional): número de logs (padrão: 50)
-- `type` (opcional): "command" | "response" | "error" | "all"
-
-**Response Example:**
-```json
-{
-  "tracker_serial": "TRK001",
-  "logs": [
-    {
-      "id": "log1",
-      "timestamp": "2024-10-15T14:30:00Z",
-      "type": "command",
-      "direction": "sent",
-      "message": "GET_LOCATION",
-      "raw_data": "AT+LOCATION?"
-    },
-    {
-      "id": "log2",
-      "timestamp": "2024-10-15T14:30:05Z",
-      "type": "response",
-      "direction": "received",
-      "message": "Location received",
-      "raw_data": "+RESP:GPS,-23.5505,-46.6333"
-    }
-  ]
-}
-```
-
----
-
-### 3️⃣ **ALERTAS E NOTIFICAÇÕES**
+### 2️⃣ **ALERTAS E NOTIFICAÇÕES**
 
 #### `GET /api/alerts`
 **Descrição:** Lista alertas configurados  
@@ -301,13 +206,13 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 - `speed_limit` - Excesso de velocidade
 - `geofence` - Cerca eletrônica
 - `ignition` - Ignição ligada/desligada
-- `low_battery` - Bateria baixa
+- `low_battery` - Bateria baixa do rastreador
 - `offline` - Rastreador offline
 - `panic_button` - Botão de pânico
 
 ---
 
-### 4️⃣ **RELATÓRIOS**
+### 3️⃣ **RELATÓRIOS**
 
 #### `GET /api/reports/vehicles/:id`
 **Descrição:** Relatório de uso do veículo  
@@ -362,7 +267,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 ```typescript
 // server/lib/api-client.ts
 
-// Rastreamento
+// Rastreamento em Tempo Real
 async getVehicleLocations(params?: {
   status?: string;
   customer_id?: string;
@@ -400,35 +305,6 @@ async getVehicleRoute(id: string, params: {
 }, token?: string) {
   const queryParams = new URLSearchParams(params as any);
   return this.get(`/api/tracking/vehicles/${id}/route?${queryParams}`, token);
-}
-
-// Teste de Rastreador
-async sendTrackerCommand(data: {
-  tracker_serial: string;
-  command: string;
-  params?: any;
-}, token?: string) {
-  return this.post("/api/tracker/command", data, token);
-}
-
-async getTrackerStatus(serial: string, token?: string) {
-  return this.get(`/api/tracker/${serial}/status`, token);
-}
-
-async getTrackerLogs(serial: string, params?: {
-  limit?: number;
-  type?: string;
-}, token?: string) {
-  const queryParams = new URLSearchParams();
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        queryParams.append(key, String(value));
-      }
-    });
-  }
-  const query = queryParams.toString();
-  return this.get(`/api/tracker/${serial}/logs${query ? `?${query}` : ""}`, token);
 }
 
 // Alertas
@@ -550,56 +426,6 @@ app.get("/api/tracking/vehicles/:id/route", requireAuth, async (req: Request, re
   }
 });
 
-// ========== ROTAS DE TESTE DE RASTREADOR ==========
-
-app.post("/api/tracker/command", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.sendTrackerCommand(req.body, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error("Send tracker command error:", error);
-    res.status(500).json({ error: "Erro ao enviar comando" });
-  }
-});
-
-app.get("/api/tracker/:serial/status", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.getTrackerStatus(req.params.serial, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error("Get tracker status error:", error);
-    res.status(500).json({ error: "Erro ao buscar status do rastreador" });
-  }
-});
-
-app.get("/api/tracker/:serial/logs", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.getTrackerLogs(req.params.serial, req.query as any, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error("Get tracker logs error:", error);
-    res.status(500).json({ error: "Erro ao buscar logs" });
-  }
-});
-
 // ========== ROTAS DE ALERTAS ==========
 
 app.get("/api/alerts", requireAuth, async (req: Request, res: Response) => {
@@ -699,15 +525,18 @@ app.get("/api/reports/vehicles/:id", requireAuth, async (req: Request, res: Resp
 
 ## 🎨 INTEGRAÇÃO NO FRONTEND
 
-### Atualizar `Tracking.tsx`:
+### Atualizar `Tracking.tsx` - Rastreamento em Tempo Real:
 
 ```typescript
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { VehicleMap } from "@/components/VehicleMap";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Tracking() {
+  const { toast } = useToast();
+  
   const { data: response, isLoading } = useQuery({
     queryKey: ["/api/tracking/vehicles"],
     refetchInterval: 5000, // Atualiza a cada 5 segundos
@@ -719,6 +548,17 @@ export default function Tracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tracking/vehicles"] });
+      toast({
+        title: "Veículo bloqueado",
+        description: "Veículo bloqueado com sucesso!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao bloquear veículo",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -728,10 +568,30 @@ export default function Tracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tracking/vehicles"] });
+      toast({
+        title: "Veículo desbloqueado",
+        description: "Veículo desbloqueado com sucesso!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao desbloquear veículo",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  const vehicles = response?.vehicles || [];
+  const vehicles = response?.vehicles?.map((v: any) => ({
+    id: v.id,
+    plate: v.plate,
+    customerName: v.customer_name,
+    lat: v.location?.lat || 0,
+    lng: v.location?.lng || 0,
+    status: v.status,
+    speed: v.location?.speed || 0,
+    lastUpdate: v.location?.timestamp ? new Date(v.location.timestamp).toLocaleString('pt-BR') : 'Sem dados',
+  })) || [];
 
   return (
     <div className="space-y-6">
@@ -741,7 +601,7 @@ export default function Tracking() {
       </div>
 
       {isLoading ? (
-        <div>Carregando...</div>
+        <div className="text-center text-muted-foreground">Carregando localizações...</div>
       ) : (
         <VehicleMap
           vehicles={vehicles}
@@ -754,42 +614,100 @@ export default function Tracking() {
 }
 ```
 
-### Atualizar `TrackerTest.tsx`:
+### Atualizar `TrackerTest.tsx` - Teste/Visualização de Rastreador:
 
 ```typescript
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { TrackerTestPanel } from "@/components/TrackerTestPanel";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tantml/react-query";
+import { VehicleMap } from "@/components/VehicleMap";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 
 export default function TrackerTest() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [vehicleId, setVehicleId] = useState("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
-  const commandMutation = useMutation({
-    mutationFn: async (data: { tracker_serial: string; command: string }) => {
-      const res = await apiRequest("POST", "/api/tracker/command", data);
-      return await res.json();
+  // Busca localização do veículo selecionado
+  const { data: locationData, isLoading } = useQuery({
+    queryKey: ["/api/tracking/vehicles", selectedVehicleId, "location"],
+    queryFn: async () => {
+      if (!selectedVehicleId) return null;
+      const res = await fetch(`/api/tracking/vehicles/${selectedVehicleId}/location`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+      });
+      return res.json();
     },
-    onSuccess: (data) => {
-      setLogs(prev => [...prev, {
-        timestamp: new Date().toLocaleTimeString(),
-        type: "response",
-        message: JSON.stringify(data),
-      }]);
-    },
+    enabled: !!selectedVehicleId,
+    refetchInterval: 3000, // Atualiza a cada 3 segundos
   });
+
+  const handleSearch = () => {
+    if (vehicleId.trim()) {
+      setSelectedVehicleId(vehicleId.trim());
+    }
+  };
+
+  const vehicle = locationData ? {
+    id: locationData.vehicle_id,
+    plate: locationData.plate,
+    customerName: "Teste",
+    lat: locationData.location?.lat || 0,
+    lng: locationData.location?.lng || 0,
+    status: "active" as const,
+    speed: locationData.location?.speed || 0,
+    lastUpdate: locationData.location?.timestamp 
+      ? new Date(locationData.location.timestamp).toLocaleString('pt-BR') 
+      : 'Sem dados',
+  } : null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Teste de Rastreadores</h1>
-        <p className="text-muted-foreground mt-1">Teste e valide o funcionamento dos dispositivos</p>
+        <h1 className="text-3xl font-bold">Teste de Rastreador</h1>
+        <p className="text-muted-foreground mt-1">Visualize a localização em tempo real de um veículo</p>
       </div>
 
-      <TrackerTestPanel 
-        onSendCommand={(serial, command) => commandMutation.mutate({ tracker_serial: serial, command })}
-        logs={logs}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Buscar Veículo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Input
+              placeholder="ID do veículo"
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              data-testid="input-search-vehicle"
+            />
+            <Button 
+              onClick={handleSearch} 
+              data-testid="button-search-vehicle"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Buscar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isLoading && <div className="text-center text-muted-foreground">Carregando...</div>}
+
+      {vehicle && (
+        <VehicleMap
+          vehicles={[vehicle]}
+          onLockVehicle={() => {}}
+          onUnlockVehicle={() => {}}
+        />
+      )}
+
+      {!vehicle && selectedVehicleId && !isLoading && (
+        <div className="text-center text-muted-foreground">Nenhum veículo encontrado</div>
+      )}
     </div>
   );
 }
@@ -799,21 +717,39 @@ export default function TrackerTest() {
 
 ## ✅ CHECKLIST DE IMPLEMENTAÇÃO
 
-- [ ] Adicionar métodos no `api-client.ts`
-- [ ] Adicionar rotas no `routes.ts`
+- [ ] Adicionar métodos de rastreamento no `api-client.ts`
+- [ ] Adicionar rotas de rastreamento no `routes.ts`
+- [ ] Adicionar métodos de alertas no `api-client.ts`
+- [ ] Adicionar rotas de alertas no `routes.ts`
+- [ ] Adicionar métodos de relatórios no `api-client.ts`
+- [ ] Adicionar rotas de relatórios no `routes.ts`
 - [ ] Integrar página de Rastreamento com API real
-- [ ] Integrar página de Teste de Rastreador com API real
-- [ ] Adicionar funcionalidade de lock/unlock na tabela de veículos
+- [ ] Integrar página de Teste de Rastreador com API real (apenas visualização)
 - [ ] Testar todos os endpoints
 - [ ] Adicionar tratamento de erros
-- [ ] Documentar endpoints no README
+- [ ] Atualizar replit.md com novos endpoints
 
 ---
 
-## 🚀 PRÓXIMOS PASSOS
+## 🚀 PRÓXIMOS PASSOS (OPCIONAIS)
 
-1. **Implementar WebSocket** para atualizações em tempo real
-2. **Adicionar mapas reais** (Leaflet, Mapbox ou Google Maps)
-3. **Criar sistema de notificações** push
+1. **Implementar WebSocket** para atualizações em tempo real sem polling
+2. **Adicionar mapas reais** (Leaflet, Mapbox ou Google Maps) substituindo o placeholder
+3. **Criar sistema de notificações** push para alertas
 4. **Implementar exportação de relatórios** (PDF/Excel)
-5. **Adicionar analytics e dashboards** avançados
+5. **Adicionar analytics e dashboards** mais detalhados
+
+---
+
+## 📝 RESUMO
+
+**Total de endpoints faltantes:** 9
+- 4 endpoints de rastreamento (visualização)
+- 4 endpoints de alertas
+- 1 endpoint de relatórios
+
+**Funcionalidade da página "Teste de Rastreador":**
+- Apenas visualização de localização em tempo real no mapa
+- Busca por ID de veículo
+- Atualização automática a cada 3 segundos
+- SEM envio de comandos ao rastreador
