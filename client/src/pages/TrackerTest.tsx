@@ -77,14 +77,6 @@ export default function TrackerTest() {
         </div>
       )}
 
-      {vehicle && !isLoading && (
-        <VehicleMap
-          vehicles={[vehicle]}
-          onLockVehicle={() => {}}
-          onUnlockVehicle={() => {}}
-        />
-      )}
-
       {error && (
         <div className="flex items-center justify-center h-[600px] text-destructive">
           <div className="text-center">
@@ -94,7 +86,15 @@ export default function TrackerTest() {
         </div>
       )}
 
-      {!vehicle && !error && selectedVehicleId && !isLoading && (
+      {!error && vehicle && !isLoading && (
+        <VehicleMap
+          vehicles={[vehicle]}
+          onLockVehicle={() => {}}
+          onUnlockVehicle={() => {}}
+        />
+      )}
+
+      {!error && !vehicle && selectedVehicleId && !isLoading && (
         <div className="flex items-center justify-center h-[600px] text-muted-foreground">
           <p>Nenhum veículo encontrado com este ID</p>
         </div>
