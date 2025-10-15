@@ -11,22 +11,8 @@ export default function TrackerTest() {
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   // Busca localização do veículo selecionado
-  const { data: locationData, isLoading } = useQuery({
-    queryKey: ["/api/tracking/vehicles", selectedVehicleId, "location"],
-    queryFn: async () => {
-      if (!selectedVehicleId) return null;
-      const res = await fetch(`/api/tracking/vehicles/${selectedVehicleId}/location`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
-      });
-      
-      if (!res.ok) {
-        throw new Error("Veículo não encontrado");
-      }
-      
-      return res.json();
-    },
+  const { data: locationData, isLoading, error } = useQuery({
+    queryKey: selectedVehicleId ? [`/api/tracking/vehicles/${selectedVehicleId}/location`] : [],
     enabled: !!selectedVehicleId,
     refetchInterval: 3000, // Atualiza a cada 3 segundos
   });
@@ -37,16 +23,16 @@ export default function TrackerTest() {
     }
   };
 
-  const vehicle = locationData ? {
-    id: locationData.vehicle_id,
-    plate: locationData.plate,
+  const vehicle = (locationData as any) ? {
+    id: (locationData as any).vehicle_id,
+    plate: (locationData as any).plate,
     customerName: "Teste de Rastreador",
-    lat: locationData.location?.lat || 0,
-    lng: locationData.location?.lng || 0,
+    lat: (locationData as any).location?.lat || 0,
+    lng: (locationData as any).location?.lng || 0,
     status: "active" as const,
-    speed: locationData.location?.speed || 0,
-    lastUpdate: locationData.location?.timestamp 
-      ? new Date(locationData.location.timestamp).toLocaleString('pt-BR') 
+    speed: (locationData as any).location?.speed || 0,
+    lastUpdate: (locationData as any).location?.timestamp 
+      ? new Date((locationData as any).location.timestamp).toLocaleString('pt-BR') 
       : 'Sem dados',
   } : null;
 
@@ -99,7 +85,16 @@ export default function TrackerTest() {
         />
       )}
 
-      {!vehicle && selectedVehicleId && !isLoading && (
+      {error && (
+        <div className="flex items-center justify-center h-[600px] text-destructive">
+          <div className="text-center">
+            <p className="font-semibold">Erro ao carregar localização</p>
+            <p className="text-sm mt-2">{(error as Error).message}</p>
+          </div>
+        </div>
+      )}
+
+      {!vehicle && !error && selectedVehicleId && !isLoading && (
         <div className="flex items-center justify-center h-[600px] text-muted-foreground">
           <p>Nenhum veículo encontrado com este ID</p>
         </div>

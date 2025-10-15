@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 export default function Tracking() {
   const { toast } = useToast();
   
-  const { data: response, isLoading } = useQuery({
+  const { data: response, isLoading, error } = useQuery({
     queryKey: ["/api/tracking/vehicles"],
     refetchInterval: 5000, // Atualiza a cada 5 segundos
   });
@@ -77,6 +77,13 @@ export default function Tracking() {
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
             <p>Carregando localizações...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-[600px] text-destructive">
+          <div className="text-center">
+            <p className="font-semibold">Erro ao carregar veículos</p>
+            <p className="text-sm mt-2">{(error as Error).message}</p>
           </div>
         </div>
       ) : vehicles.length === 0 ? (
