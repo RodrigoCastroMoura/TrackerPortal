@@ -80,20 +80,35 @@ export function UserFormDialog({
 
   // Helper function to normalize permissions (convert IDs to names if needed)
   const normalizePermissions = (permissions: string[] | undefined): string[] => {
-    if (!permissions || !permissionsData) return [];
+    if (!permissions || permissions.length === 0 || !permissionsData) return [];
     
     // Create ID to name mapping
     const idToName = new Map(permissionsData.map(p => [p.id, p.name]));
+    const nameToName = new Map(permissionsData.map(p => [p.name, p.name]));
     
     // Convert any IDs to names
-    return permissions.map(perm => {
-      // If it's an ID, convert to name
-      if (idToName.has(perm)) {
-        return idToName.get(perm)!;
-      }
-      // Otherwise assume it's already a name
-      return perm;
-    }).filter(perm => availablePermissions.includes(perm)); // Only keep valid permissions
+    const normalized = permissions
+      .map(perm => {
+        // First check if it's an ID and convert
+        if (idToName.has(perm)) {
+          return idToName.get(perm)!;
+        }
+        // Then check if it's already a valid name
+        if (nameToName.has(perm)) {
+          return perm;
+        }
+        // Invalid permission, return null to filter out
+        return null;
+      })
+      .filter((perm): perm is string => perm !== null);
+    
+    console.log('[UserFormDialog] Normalizing permissions:', {
+      input: permissions,
+      output: normalized,
+      idToNameMap: Array.from(idToName.entries()),
+    });
+    
+    return normalized;
   };
 
   const form = useForm<UserFormData>({
