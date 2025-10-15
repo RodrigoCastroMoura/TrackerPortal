@@ -430,13 +430,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats/dashboard", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.getDashboardStats(token);
       
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
+      // Busca dados de múltiplas fontes para montar o dashboard
+      const [customersRes, vehiclesRes, trackingRes] = await Promise.all([
+        apiClient.getCustomers({}, token),
+        apiClient.getVehicles({}, token),
+        apiClient.getTrackingVehicles(token),
+      ]);
       
-      res.json(response.data);
+      // Calcula estatísticas baseadas nos dados disponíveis
+      const totalCustomers = (customersRes.data as any)?.customers?.length || 0;
+      const totalVehicles = (vehiclesRes.data as any)?.vehicles?.length || 0;
+      const activeTracking = (trackingRes.data as any)?.vehicles?.filter((v: any) => v.status === 'active')?.length || 0;
+      
+      // Como não temos dados históricos, retorna dados básicos
+      const stats = {
+        total_customers: totalCustomers,
+        total_vehicles: totalVehicles,
+        active_tracking: activeTracking,
+        today_installs: 0, // Sem dados históricos
+        daily_registrations: [], // Sem dados históricos
+        user_stats: [], // Sem dados históricos
+      };
+      
+      res.json(stats);
     } catch (error) {
       console.error("Get dashboard stats error:", error);
       res.status(500).json({ error: "Erro ao buscar estatísticas" });

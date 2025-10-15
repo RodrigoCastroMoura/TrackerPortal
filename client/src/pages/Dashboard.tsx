@@ -39,16 +39,20 @@ export default function Dashboard() {
     );
   }
 
-  const dailyData = stats?.daily_registrations?.map(item => ({
-    name: new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'short' }),
-    clientes: item.customers,
-    veiculos: item.vehicles,
-  }));
+  const dailyData = stats?.daily_registrations && stats.daily_registrations.length > 0 
+    ? stats.daily_registrations.map(item => ({
+        name: new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'short' }),
+        clientes: item.customers,
+        veiculos: item.vehicles,
+      }))
+    : undefined;
 
-  const userStatsData = stats?.user_stats?.map(item => ({
-    name: item.user_name,
-    cadastros: item.total_registrations,
-  }));
+  const userStatsData = stats?.user_stats && stats.user_stats.length > 0
+    ? stats.user_stats.map(item => ({
+        name: item.user_name,
+        cadastros: item.total_registrations,
+      }))
+    : undefined;
 
   return (
     <div className="space-y-6">
