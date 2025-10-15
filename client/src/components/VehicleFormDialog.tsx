@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeVehicleData, type ApiVehicleResponse } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -86,18 +87,18 @@ export function VehicleFormDialog({
   useEffect(() => {
     if (open) {
       if (initialData) {
-        // Map API fields to form fields (API uses different field names)
-        const data: any = initialData;
+        // Normalize API response to standard format
+        const normalized = normalizeVehicleData(initialData as ApiVehicleResponse);
         form.reset({
-          customer_id: data.customer_id || data.id_cliente || "",
-          plate: data.dsplaca || data.plate || "",
-          brand: data.dsmarca || data.brand || "",
-          model: data.dsmodelo || data.model || "",
-          year: data.dsano || data.year || "",
-          color: data.dscor || data.color || "",
-          chassis: data.dschassi || data.chassis || "",
-          tracker_serial: data.IMEI || data.tracker_serial || "",
-          status: data.status || "active",
+          customer_id: normalized.customer_id,
+          plate: normalized.plate,
+          brand: normalized.brand,
+          model: normalized.model,
+          year: normalized.year,
+          color: normalized.color || "",
+          chassis: normalized.chassis || "",
+          tracker_serial: normalized.tracker_serial || "",
+          status: normalized.status,
         });
       } else {
         form.reset({

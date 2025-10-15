@@ -84,6 +84,31 @@ export interface ApiCustomer {
   };
 }
 
+// External API vehicle response (uses Portuguese field names)
+export interface ApiVehicleResponse {
+  id: string;
+  id_cliente?: string;
+  customer_id?: string;
+  dsplaca?: string;
+  plate?: string;
+  dsmarca?: string;
+  brand?: string;
+  dsmodelo?: string;
+  model?: string;
+  dsano?: string;
+  year?: string;
+  dscor?: string;
+  color?: string;
+  dschassi?: string;
+  chassis?: string;
+  IMEI?: string;
+  tracker_serial?: string;
+  status: "active" | "blocked" | "maintenance";
+  is_tracking?: boolean;
+  customer_name?: string;
+}
+
+// Normalized vehicle interface for internal use
 export interface ApiVehicle {
   id: string;
   customer_id: string;
@@ -96,6 +121,23 @@ export interface ApiVehicle {
   tracker_serial?: string;
   status: "active" | "blocked" | "maintenance";
   is_tracking?: boolean;
+}
+
+// Helper to normalize API response to standard format
+export function normalizeVehicleData(vehicle: ApiVehicleResponse): ApiVehicle {
+  return {
+    id: vehicle.id,
+    customer_id: vehicle.customer_id || vehicle.id_cliente || "",
+    plate: vehicle.dsplaca || vehicle.plate || "",
+    brand: vehicle.dsmarca || vehicle.brand || "",
+    model: vehicle.dsmodelo || vehicle.model || "",
+    year: vehicle.dsano || vehicle.year || "",
+    color: vehicle.dscor || vehicle.color,
+    chassis: vehicle.dschassi || vehicle.chassis,
+    tracker_serial: vehicle.IMEI || vehicle.tracker_serial,
+    status: vehicle.status || "active",
+    is_tracking: vehicle.is_tracking || false,
+  };
 }
 
 export interface ApiStats {

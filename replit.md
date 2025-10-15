@@ -67,6 +67,19 @@ Preferred communication style: Simple, everyday language.
 - Error handling and response normalization
 - Support for login, customer management, vehicle management, and tracker operations
 
+**API Data Mapping**:
+- External API uses Portuguese field names that differ from internal schema
+- Centralized normalization function (`normalizeVehicleData` in `shared/schema.ts`) handles mapping:
+  - `dsplaca` → `plate`
+  - `dsmarca` → `brand`
+  - `dsmodelo` → `model`
+  - `dsano` → `year`
+  - `dscor` → `color`
+  - `dschassi` → `chassis`
+  - `IMEI` → `tracker_serial`
+  - `id_cliente` → `customer_id`
+- Type safety: `ApiVehicleResponse` for external API, `ApiVehicle` for normalized internal use
+
 ### Database Schema
 
 **Local Tables** (PostgreSQL via Drizzle):
