@@ -231,3 +231,12 @@ Preferred communication style: Simple, everyday language.
 - API client normalizes external API errors
 - Toast notifications for user-facing errors
 - Development runtime error modal (Replit plugin)
+
+**Rate Limit Management**:
+- External API has 50 requests/hour limit
+- Automatic polling completely disabled in tracking pages to prevent quota exhaustion
+- Manual refresh controls in Tracking page (RefreshCw button)
+- TrackerTest page uses manual search only (no auto-polling)
+- Query configuration: `refetchInterval: false`, `refetchOnWindowFocus: false`, `retry: false`
+- Friendly 429 error messaging guides users to wait when limit reached
+- Design choice: User-controlled updates prevent multi-tab rate limit issues
