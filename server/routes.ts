@@ -377,6 +377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
+      // Debug: log user data with permissions
+      console.log("[DEBUG] GET /api/users response:", JSON.stringify(response.data, null, 2));
+      
       res.json(response.data);
     } catch (error) {
       console.error("Get users error:", error);

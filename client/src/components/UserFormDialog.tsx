@@ -69,14 +69,14 @@ export function UserFormDialog({
     isLoading: isLoadingPermissions,
     error: permissionsError,
     refetch: refetchPermissions
-  } = useQuery<{ permissions: string[] }>({
+  } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["/api/permissions"],
     refetchInterval: false,
     refetchOnWindowFocus: false,
     retry: 1,
   });
 
-  const availablePermissions = permissionsData?.permissions || [];
+  const availablePermissions = (permissionsData || []).map(p => p.name);
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -93,6 +93,8 @@ export function UserFormDialog({
 
   useEffect(() => {
     if (initialData) {
+      console.log("[DEBUG] UserFormDialog initialData:", initialData);
+      console.log("[DEBUG] Permissions from initialData:", initialData.permissions);
       form.reset({
         name: initialData.name || "",
         email: initialData.email || "",
