@@ -1,13 +1,34 @@
 import { LoginForm } from "@/components/LoginForm";
+import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
+  const { login, user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const handleLogin = (email: string, password: string) => {
-    console.log("Login attempt:", { email, password });
-    // TODO: Implement actual login logic
-    setLocation("/");
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
+
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      setLoginError(null);
+      await login(email, password);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro ao fazer login";
+      setLoginError(errorMessage);
+      toast({
+        title: "Erro no login",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   return <LoginForm onLogin={handleLogin} />;

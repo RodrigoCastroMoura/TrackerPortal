@@ -23,14 +23,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
 
 interface AppSidebarProps {
-  userRole?: "admin" | "tecnico";
+  userRole?: string;
   userName?: string;
 }
 
-export function AppSidebar({ userRole = "admin", userName = "Admin" }: AppSidebarProps) {
+export function AppSidebar({ userRole = "user", userName = "Usuário" }: AppSidebarProps) {
   const [location] = useLocation();
+  const { logout } = useAuth();
 
   const adminItems = [
     {
@@ -123,6 +125,7 @@ export function AppSidebar({ userRole = "admin", userName = "Admin" }: AppSideba
             size="icon"
             className="shrink-0"
             data-testid="button-logout"
+            onClick={() => logout()}
           >
             <LogOut className="h-4 w-4" />
           </Button>

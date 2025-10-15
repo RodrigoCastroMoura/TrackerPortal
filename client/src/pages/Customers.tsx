@@ -1,53 +1,54 @@
 import { CustomerTable } from "@/components/CustomerTable";
+import { useQuery } from "@tanstack/react-query";
+import type { ApiCustomer } from "@shared/schema";
 
-const mockCustomers = [
-  {
-    id: "1",
-    name: "João Silva",
-    cpf: "123.456.789-00",
-    email: "joao@email.com",
-    phone: "(11) 98765-4321",
-    city: "São Paulo",
-    state: "SP",
-    status: "active" as const,
-    vehicleCount: 3,
-  },
-  {
-    id: "2",
-    name: "Maria Santos",
-    cpf: "987.654.321-00",
-    email: "maria@email.com",
-    phone: "(21) 91234-5678",
-    city: "Rio de Janeiro",
-    state: "RJ",
-    status: "active" as const,
-    vehicleCount: 1,
-  },
-  {
-    id: "3",
-    name: "Pedro Costa",
-    cpf: "456.789.123-00",
-    email: "pedro@email.com",
-    phone: "(31) 99876-5432",
-    city: "Belo Horizonte",
-    state: "MG",
-    status: "inactive" as const,
-    vehicleCount: 2,
-  },
-  {
-    id: "4",
-    name: "Ana Oliveira",
-    cpf: "321.654.987-00",
-    email: "ana@email.com",
-    phone: "(41) 93456-7890",
-    city: "Curitiba",
-    state: "PR",
-    status: "active" as const,
-    vehicleCount: 1,
-  },
-];
+interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_debit' | 'payment_card'> {
+  city: string;
+  state: string;
+  vehicleCount: number;
+}
 
 export default function Customers() {
+  const { data: customers, isLoading, error } = useQuery<ApiCustomer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground mt-1">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Clientes</h1>
+            <p className="text-destructive mt-1">Erro ao carregar dados</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const transformedCustomers: CustomerWithVehicleCount[] = customers?.map(customer => ({
+    id: customer.id,
+    name: customer.name,
+    cpf: customer.cpf,
+    email: customer.email,
+    phone: customer.phone,
+    city: customer.address?.city || "-",
+    state: customer.address?.state || "-",
+    status: customer.status,
+    vehicleCount: 0,
+  })) || [];
+
   return (
     <div className="space-y-6">
       <div>
@@ -56,7 +57,7 @@ export default function Customers() {
       </div>
 
       <CustomerTable
-        customers={mockCustomers}
+        customers={transformedCustomers}
         onView={(id) => console.log("View customer:", id)}
         onEdit={(id) => console.log("Edit customer:", id)}
         onDelete={(id) => console.log("Delete customer:", id)}
