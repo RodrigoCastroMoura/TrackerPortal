@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { createContext, useContext, useState, ReactNode } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
@@ -22,42 +22,22 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
-  const [lastKnownUser, setLastKnownUser] = useState<User | null>(null);
   
-  const { data: user, isLoading, error } = useQuery<User | null>({
-    queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
-      const headers: Record<string, string> = {};
-      
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
-      const res = await fetch("/api/auth/me", {
-        headers,
-        credentials: "include",
-      });
-      
-      if (res.status === 401) {
+  // Restaura o usuário do localStorage na inicialização
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem("auth_user");
+    const token = localStorage.getItem("auth_token");
+    if (savedUser && token) {
+      try {
+        return JSON.parse(savedUser);
+      } catch {
         return null;
       }
-      if (!res.ok) {
-        throw new Error("Failed to fetch user");
-      }
-      return await res.json();
-    },
-    retry: 1,
-    retryDelay: 1000,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Atualiza o último usuário conhecido quando os dados mudam com sucesso
-  useEffect(() => {
-    if (user !== undefined && !error) {
-      setLastKnownUser(user);
     }
-  }, [user, error]);
+    return null;
+  });
+  
+  const isLoading = false;
 
   const loginMutation = useMutation({
     mutationFn: async ({ identifier, password }: { identifier: string; password: string }) => {
@@ -65,11 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data) => {
-      // Salva o token no localStorage
+      // Salva o token e usuário no localStorage
       if (data.token) {
         localStorage.setItem("auth_token", data.token);
       }
-      queryClient.setQueryData(["/api/auth/me"], data.user);
+      if (data.user) {
+        localStorage.setItem("auth_user", JSON.stringify(data.user));
+        setUser(data.user);
+      }
       setLocation("/");
     },
   });
@@ -79,9 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
-      // Remove o token do localStorage
+      // Remove o token e usuário do localStorage
       localStorage.removeItem("auth_token");
-      queryClient.setQueryData(["/api/auth/me"], null);
+      localStorage.removeItem("auth_user");
+      setUser(null);
       queryClient.clear();
       setLocation("/login");
     },
@@ -95,11 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutMutation.mutateAsync();
   };
 
-  // Usa o último usuário conhecido se houver erro (mas não 401)
-  const currentUser = error && user === undefined ? lastKnownUser : user ?? null;
-
   return (
-    <AuthContext.Provider value={{ user: currentUser, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
