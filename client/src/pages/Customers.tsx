@@ -1,5 +1,10 @@
+import { useState } from "react";
 import { CustomerTable } from "@/components/CustomerTable";
-import { useQuery } from "@tanstack/react-query";
+import { CustomerFormDialog } from "@/components/CustomerFormDialog";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ApiCustomer } from "@shared/schema";
 
 interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_debit' | 'payment_card'> {
@@ -9,11 +14,39 @@ interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_d
 }
 
 export default function Customers() {
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
+  
   const { data: response, isLoading, error } = useQuery<{ customers: ApiCustomer[] | null }>({
     queryKey: ["/api/customers"],
   });
   
   const customers = response?.customers;
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/customers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: "Cliente deletado",
+        description: "Cliente removido com sucesso!",
+      });
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao deletar cliente",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -51,6 +84,30 @@ export default function Customers() {
     vehicleCount: 0,
   })) || [];
 
+  const handleAdd = () => {
+    setSelectedCustomer(null);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (id: string) => {
+    const customer = customers?.find((c) => c.id === id);
+    if (customer) {
+      setSelectedCustomer(customer);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setCustomerToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (customerToDelete) {
+      deleteMutation.mutate(customerToDelete);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,9 +118,25 @@ export default function Customers() {
       <CustomerTable
         customers={transformedCustomers}
         onView={(id) => console.log("View customer:", id)}
-        onEdit={(id) => console.log("Edit customer:", id)}
-        onDelete={(id) => console.log("Delete customer:", id)}
-        onAdd={() => console.log("Add new customer")}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onAdd={handleAdd}
+      />
+
+      <CustomerFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        customerId={selectedCustomer?.id}
+        initialData={selectedCustomer}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Deletar Cliente"
+        description="Tem certeza que deseja deletar este cliente? Esta ação não pode ser desfeita."
+        onConfirm={confirmDelete}
+        isDeleting={deleteMutation.isPending}
       />
     </div>
   );

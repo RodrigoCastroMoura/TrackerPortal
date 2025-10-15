@@ -12,6 +12,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Customers from "@/pages/Customers";
 import Vehicles from "@/pages/Vehicles";
+import Users from "@/pages/Users";
 import Tracking from "@/pages/Tracking";
 import TrackerTest from "@/pages/TrackerTest";
 import Login from "@/pages/Login";
@@ -54,6 +55,9 @@ function Router() {
       </Route>
       <Route path="/veiculos">
         {() => <ProtectedRoute component={Vehicles} />}
+      </Route>
+      <Route path="/usuarios">
+        {() => <ProtectedRoute component={Users} />}
       </Route>
       <Route path="/rastreamento">
         {() => <ProtectedRoute component={Tracking} />}
