@@ -430,7 +430,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.createUser(req.body, token);
+      
+      const userData = { ...req.body };
+      if (userData.document) {
+        userData.cpf = userData.document;
+        delete userData.document;
+      }
+      
+      const response = await apiClient.createUser(userData, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -446,7 +453,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/users/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.updateUser(req.params.id, req.body, token);
+      
+      const userData = { ...req.body };
+      if (userData.document !== undefined) {
+        userData.cpf = userData.document;
+        delete userData.document;
+      }
+      
+      const response = await apiClient.updateUser(req.params.id, userData, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
