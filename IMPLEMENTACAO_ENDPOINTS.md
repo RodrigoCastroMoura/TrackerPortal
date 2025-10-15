@@ -2,7 +2,9 @@
 
 ## 📋 Contexto do Sistema
 
-Este é um portal de rastreamento veicular que se comunica com uma API externa em `https://tracker-api-rodrigocastrom1.replit.app`. O sistema já possui autenticação, CRUD de clientes/veículos/usuários e interfaces visuais prontas. Falta apenas a integração real dos endpoints de rastreamento para visualização no mapa.
+Este é um portal de rastreamento veicular que se comunica com uma API externa em `https://tracker-api-rodrigocastrom1.replit.app`. O sistema já possui autenticação, CRUD de clientes/veículos/usuários e interfaces visuais prontas. Falta apenas a integração real dos endpoints de rastreamento para visualização no mapa e relatórios.
+
+**IMPORTANTE:** A API externa foi atualizada e NÃO possui endpoints de alertas.
 
 ---
 
@@ -157,62 +159,7 @@ Este é um portal de rastreamento veicular que se comunica com uma API externa e
 
 ---
 
-### 2️⃣ **ALERTAS E NOTIFICAÇÕES**
-
-#### `GET /api/alerts`
-**Descrição:** Lista alertas configurados  
-**Autenticação:** Bearer Token  
-
-**Response Example:**
-```json
-{
-  "alerts": [
-    {
-      "id": "a1",
-      "type": "speed_limit",
-      "vehicle_id": "v1",
-      "vehicle_plate": "ABC-1234",
-      "condition": {
-        "max_speed": 80
-      },
-      "actions": ["email", "sms", "notification"],
-      "active": true,
-      "created_at": "2024-10-15T10:00:00Z"
-    }
-  ]
-}
-```
-
----
-
-#### `POST /api/alerts`
-**Descrição:** Cria novo alerta  
-**Autenticação:** Bearer Token  
-
-**Request Body:**
-```json
-{
-  "type": "speed_limit",
-  "vehicle_id": "v1",
-  "condition": {
-    "max_speed": 80
-  },
-  "actions": ["email", "notification"],
-  "recipients": ["admin@example.com"]
-}
-```
-
-**Tipos de Alerta:**
-- `speed_limit` - Excesso de velocidade
-- `geofence` - Cerca eletrônica
-- `ignition` - Ignição ligada/desligada
-- `low_battery` - Bateria baixa do rastreador
-- `offline` - Rastreador offline
-- `panic_button` - Botão de pânico
-
----
-
-### 3️⃣ **RELATÓRIOS**
+### 2️⃣ **RELATÓRIOS**
 
 #### `GET /api/reports/vehicles/:id`
 **Descrição:** Relatório de uso do veículo  
@@ -305,23 +252,6 @@ async getVehicleRoute(id: string, params: {
 }, token?: string) {
   const queryParams = new URLSearchParams(params as any);
   return this.get(`/api/tracking/vehicles/${id}/route?${queryParams}`, token);
-}
-
-// Alertas
-async getAlerts(token?: string) {
-  return this.get("/api/alerts", token);
-}
-
-async createAlert(data: any, token?: string) {
-  return this.post("/api/alerts", data, token);
-}
-
-async updateAlert(id: string, data: any, token?: string) {
-  return this.put(`/api/alerts/${id}`, data, token);
-}
-
-async deleteAlert(id: string, token?: string) {
-  return this.delete(`/api/alerts/${id}`, token);
 }
 
 // Relatórios
@@ -423,72 +353,6 @@ app.get("/api/tracking/vehicles/:id/route", requireAuth, async (req: Request, re
   } catch (error) {
     console.error("Get vehicle route error:", error);
     res.status(500).json({ error: "Erro ao buscar rota" });
-  }
-});
-
-// ========== ROTAS DE ALERTAS ==========
-
-app.get("/api/alerts", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.getAlerts(token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error("Get alerts error:", error);
-    res.status(500).json({ error: "Erro ao buscar alertas" });
-  }
-});
-
-app.post("/api/alerts", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.createAlert(req.body, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.status(201).json(response.data);
-  } catch (error) {
-    console.error("Create alert error:", error);
-    res.status(500).json({ error: "Erro ao criar alerta" });
-  }
-});
-
-app.put("/api/alerts/:id", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.updateAlert(req.params.id, req.body, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error("Update alert error:", error);
-    res.status(500).json({ error: "Erro ao atualizar alerta" });
-  }
-});
-
-app.delete("/api/alerts/:id", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const token = (req as any).token;
-    const response = await apiClient.deleteAlert(req.params.id, token);
-    
-    if (response.error) {
-      return res.status(response.status).json({ error: response.error });
-    }
-    
-    res.status(204).send();
-  } catch (error) {
-    console.error("Delete alert error:", error);
-    res.status(500).json({ error: "Erro ao deletar alerta" });
   }
 });
 
@@ -618,7 +482,7 @@ export default function Tracking() {
 
 ```typescript
 import { useState } from "react";
-import { useQuery } from "@tantml/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { VehicleMap } from "@/components/VehicleMap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -719,8 +583,6 @@ export default function TrackerTest() {
 
 - [ ] Adicionar métodos de rastreamento no `api-client.ts`
 - [ ] Adicionar rotas de rastreamento no `routes.ts`
-- [ ] Adicionar métodos de alertas no `api-client.ts`
-- [ ] Adicionar rotas de alertas no `routes.ts`
 - [ ] Adicionar métodos de relatórios no `api-client.ts`
 - [ ] Adicionar rotas de relatórios no `routes.ts`
 - [ ] Integrar página de Rastreamento com API real
@@ -735,21 +597,26 @@ export default function TrackerTest() {
 
 1. **Implementar WebSocket** para atualizações em tempo real sem polling
 2. **Adicionar mapas reais** (Leaflet, Mapbox ou Google Maps) substituindo o placeholder
-3. **Criar sistema de notificações** push para alertas
+3. **Criar sistema de notificações** próprio do sistema
 4. **Implementar exportação de relatórios** (PDF/Excel)
 5. **Adicionar analytics e dashboards** mais detalhados
 
 ---
 
-## 📝 RESUMO
+## 📝 RESUMO FINAL
 
-**Total de endpoints faltantes:** 9
-- 4 endpoints de rastreamento (visualização)
-- 4 endpoints de alertas
-- 1 endpoint de relatórios
+**Total de endpoints faltantes:** 5
+- ✅ 4 endpoints de rastreamento (visualização no mapa)
+- ✅ 1 endpoint de relatórios
+- ❌ Alertas removidos (API não possui)
 
 **Funcionalidade da página "Teste de Rastreador":**
 - Apenas visualização de localização em tempo real no mapa
 - Busca por ID de veículo
 - Atualização automática a cada 3 segundos
 - SEM envio de comandos ao rastreador
+
+**API Externa Atualizada:**
+- URL: https://tracker-api-rodrigocastrom1.replit.app
+- Sem endpoints de alertas
+- Com endpoints de rastreamento e relatórios
