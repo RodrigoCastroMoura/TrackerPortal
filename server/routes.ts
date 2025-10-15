@@ -567,6 +567,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== ROTAS DE RASTREAMENTO ==========
+
+  app.get("/api/tracking/vehicles", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.getVehicleLocations(req.query as any, token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle locations error:", error);
+      res.status(500).json({ error: "Erro ao buscar localizações" });
+    }
+  });
+
+  app.get("/api/tracking/vehicles/:id/location", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.getVehicleLocation(req.params.id, token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle location error:", error);
+      res.status(500).json({ error: "Erro ao buscar localização" });
+    }
+  });
+
+  app.get("/api/tracking/vehicles/:id/history", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date, interval } = req.query;
+      
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
+      }
+      
+      const response = await apiClient.getVehicleHistory(
+        req.params.id,
+        { start_date: start_date as string, end_date: end_date as string, interval: interval as string },
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle history error:", error);
+      res.status(500).json({ error: "Erro ao buscar histórico" });
+    }
+  });
+
+  app.get("/api/tracking/vehicles/:id/route", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date } = req.query;
+      
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
+      }
+      
+      const response = await apiClient.getVehicleRoute(
+        req.params.id,
+        { start_date: start_date as string, end_date: end_date as string },
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle route error:", error);
+      res.status(500).json({ error: "Erro ao buscar rota" });
+    }
+  });
+
+  // ========== ROTAS DE RELATÓRIOS ==========
+
+  app.get("/api/reports/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date, type } = req.query;
+      
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
+      }
+      
+      const response = await apiClient.getVehicleReport(
+        req.params.id,
+        { start_date: start_date as string, end_date: end_date as string, type: type as string },
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle report error:", error);
+      res.status(500).json({ error: "Erro ao gerar relatório" });
+    }
+  });
+
   // Cleanup de sessões expiradas (executado periodicamente)
   setInterval(async () => {
     try {
