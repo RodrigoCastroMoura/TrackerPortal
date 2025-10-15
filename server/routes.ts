@@ -444,8 +444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      // If permissions were provided and user is admin, convert names to IDs and add them
-      if (permissions && permissions.length > 0 && response.data?.id && userData.role === "admin") {
+      // If permissions were provided, convert names to IDs and add them
+      if (permissions && permissions.length > 0 && response.data?.id) {
         // Get available permissions to map names to IDs
         const permsResponse = await apiClient.getPermissions(token);
         if (!permsResponse.error && permsResponse.data) {
@@ -455,14 +455,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .filter((id: string | undefined) => id !== undefined);
           
           if (permissionIds.length > 0) {
-            const permResponse = await apiClient.manageAdminPermissions(
+            // Use appropriate endpoint based on user role
+            const managePermissionsFn = userData.role === "admin" 
+              ? apiClient.manageAdminPermissions 
+              : apiClient.manageUserPermissions;
+            
+            const permResponse = await managePermissionsFn(
               response.data.id, 
               { permissions: permissionIds, action: "add" }, 
               token
             );
             
             if (permResponse.error) {
-              console.error("Error adding permissions to admin:", permResponse.error);
+              console.error(`Error adding permissions to ${userData.role}:`, permResponse.error);
             }
           }
         }
@@ -494,9 +499,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      // If permissions were provided and the role being set is admin, update them
+      // If permissions were provided, update them for both admin and user roles
       // We check the REQUESTED role from req.body, not the current role in the API
-      if (permissions !== undefined && req.body.role === "admin") {
+      if (permissions !== undefined && req.body.role) {
         // Retry loop to wait for role to be updated by the external API
         let retries = 3;
         let roleUpdated = false;
@@ -508,19 +513,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`[PUT /api/users/:id] Retry ${i + 1}/${retries} - Current role:`, currentUserResponse.data?.role);
           
-          if (currentUserResponse.data?.role === "admin") {
+          if (currentUserResponse.data?.role === req.body.role) {
             roleUpdated = true;
             break;
           }
         }
         
         if (!roleUpdated) {
-          console.error('[PUT /api/users/:id] Role was not updated to admin after retries. Skipping permissions.');
+          console.error(`[PUT /api/users/:id] Role was not updated to ${req.body.role} after retries. Skipping permissions.`);
           // Return success anyway - permissions can be set later
           return res.json(response.data);
         }
         
-        console.log('[PUT /api/users/:id] Role confirmed as admin, managing permissions');
+        console.log(`[PUT /api/users/:id] Role confirmed as ${req.body.role}, managing permissions`);
         console.log('[PUT /api/users/:id] Current permissions:', currentUserResponse.data?.permissions);
         
         // Get available permissions to map names to IDs
@@ -528,10 +533,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!permsResponse.error && permsResponse.data) {
           const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
           
+          // Use appropriate endpoint based on user role
+          const managePermissionsFn = req.body.role === "admin" 
+            ? apiClient.manageAdminPermissions 
+            : apiClient.manageUserPermissions;
+          
           // Remove existing permissions (already as IDs in the response)
           if (currentUserResponse.data?.permissions?.length > 0) {
             console.log('[PUT /api/users/:id] Removing old permissions:', currentUserResponse.data.permissions);
-            const removeResponse = await apiClient.manageAdminPermissions(
+            const removeResponse = await managePermissionsFn(
               req.params.id, 
               { permissions: currentUserResponse.data.permissions, action: "remove" }, 
               token
@@ -550,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('[PUT /api/users/:id] Converting:', permissions, '->', permissionIds);
             
             if (permissionIds.length > 0) {
-              const addResponse = await apiClient.manageAdminPermissions(
+              const addResponse = await managePermissionsFn(
                 req.params.id, 
                 { permissions: permissionIds, action: "add" }, 
                 token
@@ -661,7 +671,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Manage permissions error:", error);
+      console.error("Manage admin permissions error:", error);
+      res.status(500).json({ error: "Erro ao gerenciar permissões" });
+    }
+  });
+
+  app.post("/api/permissions/user/:userId/permissions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.manageUserPermissions(req.params.userId, req.body, token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Manage user permissions error:", error);
       res.status(500).json({ error: "Erro ao gerenciar permissões" });
     }
   });
