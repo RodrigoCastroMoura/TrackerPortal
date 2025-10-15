@@ -481,6 +481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { permissions, ...userData } = req.body;
       
+      console.log('[PUT /api/users/:id] Received data:', { permissions, role: userData.role });
+      
       if (userData.document !== undefined) {
         userData.cpf = userData.document;
         delete userData.document;
@@ -492,44 +494,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      // If permissions were provided and user is admin, update them
-      if (permissions !== undefined) {
-        const currentUserResponse = await apiClient.getUser(req.params.id, token);
-        const isAdmin = currentUserResponse.data?.role === "admin";
+      // If permissions were provided and the role being set is admin, update them
+      // We check the REQUESTED role from req.body, not the current role in the API
+      if (permissions !== undefined && req.body.role === "admin") {
+        // Retry loop to wait for role to be updated by the external API
+        let retries = 3;
+        let roleUpdated = false;
+        let currentUserResponse: any;
         
-        if (isAdmin) {
-          // Get available permissions to map names to IDs
-          const permsResponse = await apiClient.getPermissions(token);
-          if (!permsResponse.error && permsResponse.data) {
-            const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+        for (let i = 0; i < retries; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          currentUserResponse = await apiClient.getUser(req.params.id, token);
+          
+          console.log(`[PUT /api/users/:id] Retry ${i + 1}/${retries} - Current role:`, currentUserResponse.data?.role);
+          
+          if (currentUserResponse.data?.role === "admin") {
+            roleUpdated = true;
+            break;
+          }
+        }
+        
+        if (!roleUpdated) {
+          console.error('[PUT /api/users/:id] Role was not updated to admin after retries. Skipping permissions.');
+          // Return success anyway - permissions can be set later
+          return res.json(response.data);
+        }
+        
+        console.log('[PUT /api/users/:id] Role confirmed as admin, managing permissions');
+        console.log('[PUT /api/users/:id] Current permissions:', currentUserResponse.data?.permissions);
+        
+        // Get available permissions to map names to IDs
+        const permsResponse = await apiClient.getPermissions(token);
+        if (!permsResponse.error && permsResponse.data) {
+          const permissionMap = new Map(permsResponse.data.map((p: any) => [p.name, p.id]));
+          
+          // Remove existing permissions (already as IDs in the response)
+          if (currentUserResponse.data?.permissions?.length > 0) {
+            console.log('[PUT /api/users/:id] Removing old permissions:', currentUserResponse.data.permissions);
+            const removeResponse = await apiClient.manageAdminPermissions(
+              req.params.id, 
+              { permissions: currentUserResponse.data.permissions, action: "remove" }, 
+              token
+            );
+            if (removeResponse.error) {
+              console.error("Error removing permissions:", removeResponse.error);
+            }
+          }
+          
+          // Add new permissions (convert names to IDs)
+          if (permissions.length > 0) {
+            const permissionIds = permissions
+              .map((name: string) => permissionMap.get(name))
+              .filter((id: string | undefined) => id !== undefined);
             
-            // Remove existing permissions (already as IDs in the response)
-            if (!currentUserResponse.error && currentUserResponse.data?.permissions?.length > 0) {
-              const removeResponse = await apiClient.manageAdminPermissions(
+            console.log('[PUT /api/users/:id] Converting:', permissions, '->', permissionIds);
+            
+            if (permissionIds.length > 0) {
+              const addResponse = await apiClient.manageAdminPermissions(
                 req.params.id, 
-                { permissions: currentUserResponse.data.permissions, action: "remove" }, 
+                { permissions: permissionIds, action: "add" }, 
                 token
               );
-              if (removeResponse.error) {
-                console.error("Error removing permissions:", removeResponse.error);
-              }
-            }
-            
-            // Add new permissions (convert names to IDs)
-            if (permissions.length > 0) {
-              const permissionIds = permissions
-                .map((name: string) => permissionMap.get(name))
-                .filter((id: string | undefined) => id !== undefined);
-              
-              if (permissionIds.length > 0) {
-                const addResponse = await apiClient.manageAdminPermissions(
-                  req.params.id, 
-                  { permissions: permissionIds, action: "add" }, 
-                  token
-                );
-                if (addResponse.error) {
-                  console.error("Error adding permissions:", addResponse.error);
-                }
+              if (addResponse.error) {
+                console.error("Error adding permissions:", addResponse.error);
+              } else {
+                console.log('[PUT /api/users/:id] Successfully added new permissions');
               }
             }
           }
