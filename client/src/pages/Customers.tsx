@@ -4,7 +4,7 @@ import { CustomerFormDialog } from "@/components/CustomerFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import type { ApiCustomer } from "@shared/schema";
 
 interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_debit' | 'payment_card'> {
@@ -14,7 +14,7 @@ interface CustomerWithVehicleCount extends Omit<ApiCustomer, 'address' | 'auto_d
 }
 
 export default function Customers() {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
@@ -32,7 +32,7 @@ export default function Customers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
+      alert({
         title: "Cliente deletado",
         description: "Cliente removido com sucesso!",
       });
@@ -40,7 +40,7 @@ export default function Customers() {
       setCustomerToDelete(null);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao deletar cliente",
         description: error.message,
         variant: "destructive",

@@ -1,11 +1,10 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
 import { apiClient } from "./lib/api-client";
 import { loginSchema } from "@shared/schema";
 import { ZodError } from "zod";
 
-// Middleware de autenticação
+// Middleware de autenticação - apenas valida que o token existe
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace("Bearer ", "");
   
@@ -13,16 +12,8 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Não autenticado" });
   }
 
-  const session = await storage.getSessionByToken(token);
-  
-  if (!session) {
-    return res.status(401).json({ error: "Sessão inválida ou expirada" });
-  }
-
-  // Adiciona dados da sessão na request
-  (req as any).session = session;
-  (req as any).userId = session.userId;
-  (req as any).token = session.token;
+  // Adiciona token na request para uso nas rotas
+  (req as any).token = token;
   
   next();
 }
@@ -42,32 +33,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { access_token, refresh_token, user } = response.data!;
 
-      // Cria sessão no banco local
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // 24 horas
-
-      const session = await storage.createSession({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
+      res.json({
         token: access_token,
         refreshToken: refresh_token,
-        expiresAt,
-      });
-
-      // Cacheia dados do usuário
-      await storage.cacheUser({
-        id: user.id,
-        email: user.email,
-        name: user.name || user.email || identifier,
-        document: user.document,
-        role: user.role,
-        status: user.status || "active",
-        permissions: user.permissions || [],
-      });
-
-      res.json({
-        token: session.token,
         user: {
           id: user.id,
           email: user.email,
@@ -88,14 +56,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de logout
   app.post("/api/auth/logout", requireAuth, async (req: Request, res: Response) => {
     try {
-      const session = (req as any).session;
       const token = (req as any).token;
       
       // Faz logout na API externa
       await apiClient.logout(token);
-      
-      // Remove sessão do banco local
-      await storage.deleteSession(session.id);
       
       res.json({ message: "Logout realizado com sucesso" });
     } catch (error) {
@@ -104,23 +68,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rota para verificar sessão
+  // Rota para verificar sessão - busca dados do usuário na API
   app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
     try {
-      const session = (req as any).session;
-      const user = await storage.getCachedUser(session.userId);
+      const token = (req as any).token;
+      const response = await apiClient.getCurrentUser(token);
       
-      if (!user) {
-        return res.status(404).json({ error: "Usuário não encontrado" });
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
       }
 
-      res.json({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        permissions: user.permissions,
-      });
+      res.json(response.data);
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Erro ao buscar usuário" });
@@ -245,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      res.status(204).send();
+      res.json(response.data || { message: "Cliente deletado com sucesso" });
     } catch (error) {
       console.error("Delete customer error:", error);
       res.status(500).json({ error: "Erro ao deletar cliente" });
@@ -266,6 +224,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response.data);
     } catch (error) {
       console.error("Get vehicles error:", error);
+      res.status(500).json({ error: "Erro ao buscar veículos" });
+    }
+  });
+
+  app.get("/api/vehicles/search", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { q, page = 1, per_page = 10 } = req.query;
+      
+      if (!q) {
+        return res.status(400).json({ error: "Parâmetro de busca (q) é obrigatório" });
+      }
+      
+      const response = await apiClient.searchVehicles(
+        q as string,
+        Number(page),
+        Number(per_page),
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Search vehicles error:", error);
       res.status(500).json({ error: "Erro ao buscar veículos" });
     }
   });
@@ -327,17 +312,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      res.status(204).send();
+      res.json(response.data || { message: "Veículo deletado com sucesso" });
     } catch (error) {
       console.error("Delete vehicle error:", error);
       res.status(500).json({ error: "Erro ao deletar veículo" });
     }
   });
 
-  app.post("/api/vehicles/:id/block", requireAuth, async (req: Request, res: Response) => {
+  // ========== ROTAS DE RASTREAMENTO ==========
+  
+  app.get("/api/tracking/vehicles", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.blockVehicle(req.params.id, token);
+      const response = await apiClient.getTrackingVehicles(token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -345,15 +332,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Block vehicle error:", error);
-      res.status(500).json({ error: "Erro ao bloquear veículo" });
+      console.error("Get tracking vehicles error:", error);
+      res.status(500).json({ error: "Erro ao buscar veículos rastreados" });
     }
   });
 
-  app.post("/api/vehicles/:id/unblock", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/tracking/vehicles/:id/location", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.unblockVehicle(req.params.id, token);
+      const response = await apiClient.getVehicleLocation(req.params.id, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -361,8 +348,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Unblock vehicle error:", error);
-      res.status(500).json({ error: "Erro ao desbloquear veículo" });
+      console.error("Get vehicle location error:", error);
+      res.status(500).json({ error: "Erro ao buscar localização do veículo" });
+    }
+  });
+
+  app.get("/api/tracking/vehicles/:id/history", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date } = req.query;
+      
+      const response = await apiClient.getVehicleHistory(
+        req.params.id,
+        start_date as string,
+        end_date as string,
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle history error:", error);
+      res.status(500).json({ error: "Erro ao buscar histórico do veículo" });
+    }
+  });
+
+  app.get("/api/tracking/vehicles/:id/route", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date } = req.query;
+      
+      const response = await apiClient.getVehicleRoute(
+        req.params.id,
+        start_date as string,
+        end_date as string,
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle route error:", error);
+      res.status(500).json({ error: "Erro ao buscar rota do veículo" });
+    }
+  });
+
+  // ========== ROTAS DE RELATÓRIOS ==========
+  
+  app.get("/api/reports/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const { start_date, end_date, type } = req.query;
+      
+      const response = await apiClient.getVehicleReport(
+        req.params.id,
+        start_date as string,
+        end_date as string,
+        type as string,
+        token
+      );
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get vehicle report error:", error);
+      res.status(500).json({ error: "Erro ao gerar relatório" });
+    }
+  });
+
+  // ========== ROTAS DE ESTATÍSTICAS ==========
+  
+  app.get("/api/stats/dashboard", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.getDashboardStats(token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data);
+    } catch (error) {
+      console.error("Get dashboard stats error:", error);
+      res.status(500).json({ error: "Erro ao buscar estatísticas" });
     }
   });
 
@@ -380,33 +457,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response.data);
     } catch (error) {
       console.error("Get users error:", error);
-      res.status(500).json({ error: "Erro ao buscar usuários" });
-    }
-  });
-
-  app.get("/api/users/search", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      const { q, page = 1, per_page = 10 } = req.query;
-      
-      if (!q) {
-        return res.status(400).json({ error: "Parâmetro de busca (q) é obrigatório" });
-      }
-      
-      const response = await apiClient.searchUsers(
-        q as string,
-        Number(page),
-        Number(per_page),
-        token
-      );
-      
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
-      
-      res.json(response.data);
-    } catch (error) {
-      console.error("Search users error:", error);
       res.status(500).json({ error: "Erro ao buscar usuários" });
     }
   });
@@ -430,47 +480,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      
-      const { permissions, ...userData } = req.body;
-      
-      if (userData.document) {
-        userData.cpf = userData.document;
-        delete userData.document;
-      }
-      
-      const response = await apiClient.createUser(userData, token);
+      const response = await apiClient.createUser(req.body, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
-      }
-      
-      // If permissions were provided, convert names to IDs and add them
-      if (permissions && permissions.length > 0 && (response.data as any)?.id) {
-        // Get available permissions to map names to IDs
-        const permsResponse = await apiClient.getPermissions(token);
-        if (!permsResponse.error && permsResponse.data) {
-          const permissionMap = new Map((permsResponse.data as any[]).map((p: any) => [p.name, p.id]));
-          const permissionIds = permissions
-            .map((name: string) => permissionMap.get(name))
-            .filter((id: string | undefined) => id !== undefined);
-          
-          if (permissionIds.length > 0) {
-            // Use appropriate endpoint based on user role
-            const managePermissionsFn = userData.role === "admin" 
-              ? apiClient.manageAdminPermissions.bind(apiClient)
-              : apiClient.manageUserPermissions.bind(apiClient);
-            
-            const permResponse = await managePermissionsFn(
-              (response.data as any).id, 
-              { permissions: permissionIds, action: "add" }, 
-              token
-            );
-            
-            if (permResponse.error) {
-              console.error(`Error adding permissions to ${userData.role}:`, permResponse.error);
-            }
-          }
-        }
       }
       
       res.status(201).json(response.data);
@@ -483,96 +496,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/users/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      
-      const { permissions, ...userData } = req.body;
-      
-      console.log('[PUT /api/users/:id] Received data:', { permissions, role: userData.role });
-      
-      if (userData.document !== undefined) {
-        userData.cpf = userData.document;
-        delete userData.document;
-      }
-      
-      const response = await apiClient.updateUser(req.params.id, userData, token);
+      const response = await apiClient.updateUser(req.params.id, req.body, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
-      }
-      
-      // If permissions were provided, update them for both admin and user roles
-      // We check the REQUESTED role from req.body, not the current role in the API
-      if (permissions !== undefined && req.body.role) {
-        // Retry loop to wait for role to be updated by the external API
-        let retries = 3;
-        let roleUpdated = false;
-        let currentUserResponse: any;
-        
-        for (let i = 0; i < retries; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-          currentUserResponse = await apiClient.getUser(req.params.id, token);
-          
-          console.log(`[PUT /api/users/:id] Retry ${i + 1}/${retries} - Current role:`, currentUserResponse.data?.role);
-          
-          if (currentUserResponse.data?.role === req.body.role) {
-            roleUpdated = true;
-            break;
-          }
-        }
-        
-        if (!roleUpdated) {
-          console.error(`[PUT /api/users/:id] Role was not updated to ${req.body.role} after retries. Skipping permissions.`);
-          // Return success anyway - permissions can be set later
-          return res.json(response.data);
-        }
-        
-        console.log(`[PUT /api/users/:id] Role confirmed as ${req.body.role}, managing permissions`);
-        console.log('[PUT /api/users/:id] Current permissions:', currentUserResponse.data?.permissions);
-        
-        // Get available permissions to map names to IDs
-        const permsResponse = await apiClient.getPermissions(token);
-        if (!permsResponse.error && permsResponse.data) {
-          const permissionMap = new Map((permsResponse.data as any[]).map((p: any) => [p.name, p.id]));
-          
-          // Use appropriate endpoint based on user role
-          const managePermissionsFn = req.body.role === "admin" 
-            ? apiClient.manageAdminPermissions.bind(apiClient)
-            : apiClient.manageUserPermissions.bind(apiClient);
-          
-          // Remove existing permissions (already as IDs in the response)
-          if (currentUserResponse.data?.permissions?.length > 0) {
-            console.log('[PUT /api/users/:id] Removing old permissions:', currentUserResponse.data.permissions);
-            const removeResponse = await managePermissionsFn(
-              req.params.id, 
-              { permissions: currentUserResponse.data.permissions, action: "remove" }, 
-              token
-            );
-            if (removeResponse.error) {
-              console.error("Error removing permissions:", removeResponse.error);
-            }
-          }
-          
-          // Add new permissions (convert names to IDs)
-          if (permissions.length > 0) {
-            const permissionIds = permissions
-              .map((name: string) => permissionMap.get(name))
-              .filter((id: string | undefined) => id !== undefined);
-            
-            console.log('[PUT /api/users/:id] Converting:', permissions, '->', permissionIds);
-            
-            if (permissionIds.length > 0) {
-              const addResponse = await managePermissionsFn(
-                req.params.id, 
-                { permissions: permissionIds, action: "add" }, 
-                token
-              );
-              if (addResponse.error) {
-                console.error("Error adding permissions:", addResponse.error);
-              } else {
-                console.log('[PUT /api/users/:id] Successfully added new permissions');
-              }
-            }
-          }
-        }
       }
       
       res.json(response.data);
@@ -591,63 +518,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ error: response.error });
       }
       
-      res.status(204).send();
+      res.json(response.data || { message: "Usuário deletado com sucesso" });
     } catch (error) {
       console.error("Delete user error:", error);
       res.status(500).json({ error: "Erro ao deletar usuário" });
     }
   });
 
-  app.post("/api/users/:id/status", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      const response = await apiClient.toggleUserStatus(req.params.id, req.body.status, token);
-      
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
-      
-      res.json(response.data);
-    } catch (error) {
-      console.error("Toggle user status error:", error);
-      res.status(500).json({ error: "Erro ao alterar status do usuário" });
-    }
-  });
-
-  // ========== ROTAS DE ESTATÍSTICAS ==========
-  
-  app.get("/api/stats/dashboard", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      
-      // Busca estatísticas de clientes
-      const customersStats = await apiClient.getCustomerStats(token);
-      
-      // Busca veículos para contar ativos
-      const vehiclesResponse = await apiClient.getVehicles({ page: 1, per_page: 1 }, token);
-      
-      const stats = {
-        total_customers: (customersStats.data as any)?.total_customers || 0,
-        total_vehicles: (vehiclesResponse.data as any)?.total || 0,
-        active_tracking: (vehiclesResponse.data as any)?.active_count || 0,
-        today_installs: (customersStats.data as any)?.today_installs || 0,
-        daily_registrations: (customersStats.data as any)?.daily_registrations || [],
-        user_stats: (customersStats.data as any)?.user_stats || [],
-      };
-      
-      res.json(stats);
-    } catch (error) {
-      console.error("Get dashboard stats error:", error);
-      res.status(500).json({ error: "Erro ao buscar estatísticas" });
-    }
-  });
-
   // ========== ROTAS DE PERMISSÕES ==========
   
-  app.get("/api/permissions", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/permissions/admin/:id/permissions", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.getPermissions(token);
+      const response = await apiClient.getAdminPermissions(req.params.id, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -655,15 +538,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Get permissions error:", error);
+      console.error("Get admin permissions error:", error);
       res.status(500).json({ error: "Erro ao buscar permissões" });
     }
   });
 
-  app.post("/api/permissions/admin/:adminId/permissions", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/permissions/admin/:id/permissions", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.manageAdminPermissions(req.params.adminId, req.body, token);
+      const response = await apiClient.updateAdminPermissions(req.params.id, req.body, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -671,15 +554,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Manage admin permissions error:", error);
-      res.status(500).json({ error: "Erro ao gerenciar permissões" });
+      console.error("Update admin permissions error:", error);
+      res.status(500).json({ error: "Erro ao atualizar permissões" });
     }
   });
 
-  app.post("/api/permissions/user/:userId/permissions", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/permissions/user/:id/permissions", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.manageUserPermissions(req.params.userId, req.body, token);
+      const response = await apiClient.getUserPermissions(req.params.id, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -687,17 +570,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Manage user permissions error:", error);
-      res.status(500).json({ error: "Erro ao gerenciar permissões" });
+      console.error("Get user permissions error:", error);
+      res.status(500).json({ error: "Erro ao buscar permissões" });
     }
   });
 
-  // ========== ROTAS DE RASTREAMENTO ==========
-
-  app.get("/api/tracking/vehicles", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/permissions/user/:id/permissions", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.getVehicleLocations(req.query as any, token);
+      const response = await apiClient.updateUserPermissions(req.params.id, req.body, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -705,15 +586,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Get vehicle locations error:", error);
-      res.status(500).json({ error: "Erro ao buscar localizações" });
+      console.error("Update user permissions error:", error);
+      res.status(500).json({ error: "Erro ao atualizar permissões" });
     }
   });
 
-  app.get("/api/tracking/vehicles/:id/location", requireAuth, async (req: Request, res: Response) => {
+  // ========== TESTE DE RASTREADOR ==========
+  
+  app.get("/api/tracker/test", requireAuth, async (req: Request, res: Response) => {
     try {
       const token = (req as any).token;
-      const response = await apiClient.getVehicleLocation(req.params.id, token);
+      const { imei } = req.query;
+      
+      if (!imei) {
+        return res.status(400).json({ error: "IMEI é obrigatório" });
+      }
+      
+      const response = await apiClient.testTracker(imei as string, token);
       
       if (response.error) {
         return res.status(response.status).json({ error: response.error });
@@ -721,99 +610,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(response.data);
     } catch (error) {
-      console.error("Get vehicle location error:", error);
-      res.status(500).json({ error: "Erro ao buscar localização" });
+      console.error("Test tracker error:", error);
+      res.status(500).json({ error: "Erro ao testar rastreador" });
     }
   });
-
-  app.get("/api/tracking/vehicles/:id/history", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      const { start_date, end_date, interval } = req.query;
-      
-      if (!start_date || !end_date) {
-        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
-      }
-      
-      const response = await apiClient.getVehicleHistory(
-        req.params.id,
-        { start_date: start_date as string, end_date: end_date as string, interval: interval as string },
-        token
-      );
-      
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
-      
-      res.json(response.data);
-    } catch (error) {
-      console.error("Get vehicle history error:", error);
-      res.status(500).json({ error: "Erro ao buscar histórico" });
-    }
-  });
-
-  app.get("/api/tracking/vehicles/:id/route", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      const { start_date, end_date } = req.query;
-      
-      if (!start_date || !end_date) {
-        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
-      }
-      
-      const response = await apiClient.getVehicleRoute(
-        req.params.id,
-        { start_date: start_date as string, end_date: end_date as string },
-        token
-      );
-      
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
-      
-      res.json(response.data);
-    } catch (error) {
-      console.error("Get vehicle route error:", error);
-      res.status(500).json({ error: "Erro ao buscar rota" });
-    }
-  });
-
-  // ========== ROTAS DE RELATÓRIOS ==========
-
-  app.get("/api/reports/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const token = (req as any).token;
-      const { start_date, end_date, type } = req.query;
-      
-      if (!start_date || !end_date) {
-        return res.status(400).json({ error: "start_date e end_date são obrigatórios" });
-      }
-      
-      const response = await apiClient.getVehicleReport(
-        req.params.id,
-        { start_date: start_date as string, end_date: end_date as string, type: type as string },
-        token
-      );
-      
-      if (response.error) {
-        return res.status(response.status).json({ error: response.error });
-      }
-      
-      res.json(response.data);
-    } catch (error) {
-      console.error("Get vehicle report error:", error);
-      res.status(500).json({ error: "Erro ao gerar relatório" });
-    }
-  });
-
-  // Cleanup de sessões expiradas (executado periodicamente)
-  setInterval(async () => {
-    try {
-      await storage.deleteExpiredSessions();
-    } catch (error) {
-      console.error("Error cleaning expired sessions:", error);
-    }
-  }, 60 * 60 * 1000); // A cada 1 hora
 
   const httpServer = createServer(app);
 

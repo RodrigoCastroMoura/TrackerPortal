@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +60,7 @@ export function UserFormDialog({
   userId,
   initialData,
 }: UserFormDialogProps) {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const isEditing = !!userId;
 
   // Buscar permissões disponíveis
@@ -151,7 +151,7 @@ export function UserFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
+      alert({
         title: "Usuário criado",
         description: "Usuário cadastrado com sucesso!",
       });
@@ -159,7 +159,7 @@ export function UserFormDialog({
       form.reset();
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao criar usuário",
         description: error.message,
         variant: "destructive",
@@ -174,14 +174,14 @@ export function UserFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
+      alert({
         title: "Usuário atualizado",
         description: "Usuário atualizado com sucesso!",
       });
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao atualizar usuário",
         description: error.message,
         variant: "destructive",

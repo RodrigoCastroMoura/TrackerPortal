@@ -1,47 +1,4 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, json } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-// Tabela de sessões de usuário
-export const sessions = pgTable("sessions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: text("user_id").notNull(),
-  email: text("email").notNull(),
-  role: text("role").notNull(), // admin ou user
-  token: text("token").notNull(),
-  refreshToken: text("refresh_token"),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").notNull().default(sql`now()`),
-});
-
-// Cache de dados de usuários da API
-export const userCache = pgTable("user_cache", {
-  id: varchar("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  document: text("document"),
-  role: text("role").notNull(),
-  status: text("status").notNull(),
-  permissions: text("permissions").array(),
-  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
-});
-
-// Schemas de inserção
-export const insertSessionSchema = createInsertSchema(sessions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertUserCacheSchema = createInsertSchema(userCache).omit({
-  updatedAt: true,
-});
-
-// Tipos
-export type InsertSession = z.infer<typeof insertSessionSchema>;
-export type Session = typeof sessions.$inferSelect;
-export type InsertUserCache = z.infer<typeof insertUserCacheSchema>;
-export type UserCache = typeof userCache.$inferSelect;
 
 // Schema de login
 export const loginSchema = z.object({

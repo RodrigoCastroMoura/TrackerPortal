@@ -95,6 +95,10 @@ class ApiClient {
     }, token);
   }
 
+  async getCurrentUser(token?: string) {
+    return this.get("/api/auth/me", token);
+  }
+
   // Customer endpoints
   async getCustomers(params?: {
     page?: number;
@@ -191,6 +195,10 @@ class ApiClient {
     return this.post(`/api/vehicles/${id}/unblock`, {}, token);
   }
 
+  async searchVehicles(q: string, page = 1, per_page = 10, token?: string) {
+    return this.get(`/api/vehicles/search?q=${encodeURIComponent(q)}&page=${page}&per_page=${per_page}`, token);
+  }
+
   // User endpoints
   async getUsers(params?: {
     page?: number;
@@ -247,7 +255,27 @@ class ApiClient {
     return this.post(`/api/permissions/user/${userId}/permissions`, data, token);
   }
 
+  async getAdminPermissions(id: string, token?: string) {
+    return this.get(`/api/permissions/admin/${id}/permissions`, token);
+  }
+
+  async updateAdminPermissions(id: string, data: any, token?: string) {
+    return this.put(`/api/permissions/admin/${id}/permissions`, data, token);
+  }
+
+  async getUserPermissions(id: string, token?: string) {
+    return this.get(`/api/permissions/user/${id}/permissions`, token);
+  }
+
+  async updateUserPermissions(id: string, data: any, token?: string) {
+    return this.put(`/api/permissions/user/${id}/permissions`, data, token);
+  }
+
   // Tracking endpoints
+  async getTrackingVehicles(token?: string) {
+    return this.get("/api/tracking/vehicles", token);
+  }
+
   async getVehicleLocations(params?: {
     status?: string;
     customer_id?: string;
@@ -270,36 +298,37 @@ class ApiClient {
     return this.get(`/api/tracking/vehicles/${id}/location`, token);
   }
 
-  async getVehicleHistory(id: string, params: {
-    start_date: string;
-    end_date: string;
-    interval?: string;
-  }, token?: string) {
-    const queryParams = new URLSearchParams(params as any);
-    return this.get(`/api/tracking/vehicles/${id}/history?${queryParams}`, token);
+  async getVehicleHistory(id: string, start_date: string, end_date: string, token?: string) {
+    const params = new URLSearchParams();
+    if (start_date) params.append('start_date', start_date);
+    if (end_date) params.append('end_date', end_date);
+    return this.get(`/api/tracking/vehicles/${id}/history?${params}`, token);
   }
 
-  async getVehicleRoute(id: string, params: {
-    start_date: string;
-    end_date: string;
-  }, token?: string) {
-    const queryParams = new URLSearchParams(params as any);
-    return this.get(`/api/tracking/vehicles/${id}/route?${queryParams}`, token);
+  async getVehicleRoute(id: string, start_date: string, end_date: string, token?: string) {
+    const params = new URLSearchParams();
+    if (start_date) params.append('start_date', start_date);
+    if (end_date) params.append('end_date', end_date);
+    return this.get(`/api/tracking/vehicles/${id}/route?${params}`, token);
   }
 
   // Report endpoints
-  async getVehicleReport(id: string, params: {
-    start_date: string;
-    end_date: string;
-    type?: string;
-  }, token?: string) {
-    const queryParams = new URLSearchParams(params as any);
-    return this.get(`/api/reports/vehicles/${id}?${queryParams}`, token);
+  async getVehicleReport(id: string, start_date: string, end_date: string, type: string, token?: string) {
+    const params = new URLSearchParams();
+    if (start_date) params.append('start_date', start_date);
+    if (end_date) params.append('end_date', end_date);
+    if (type) params.append('type', type);
+    return this.get(`/api/reports/vehicles/${id}?${params}`, token);
   }
 
   // Dashboard stats
   async getDashboardStats(token?: string) {
     return this.get("/api/stats/dashboard", token);
+  }
+
+  // Tracker testing
+  async testTracker(imei: string, token?: string) {
+    return this.get(`/api/tracker/test?imei=${encodeURIComponent(imei)}`, token);
   }
 }
 

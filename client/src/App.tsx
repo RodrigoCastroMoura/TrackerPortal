@@ -1,7 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
+import { AlertProvider } from "@/hooks/use-alert";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -105,10 +105,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-          <Toaster />
+          <AlertProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </AlertProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

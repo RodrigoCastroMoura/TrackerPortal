@@ -4,11 +4,11 @@ import { UserFormDialog } from "@/components/UserFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import type { ApiUser } from "@shared/schema";
 
 export default function Users() {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
@@ -26,7 +26,7 @@ export default function Users() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
+      alert({
         title: "Usuário deletado",
         description: "Usuário removido com sucesso!",
       });
@@ -34,7 +34,7 @@ export default function Users() {
       setUserToDelete(null);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao deletar usuário",
         description: error.message,
         variant: "destructive",

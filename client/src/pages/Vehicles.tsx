@@ -4,7 +4,7 @@ import { VehicleFormDialog } from "@/components/VehicleFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import { normalizeVehicleData, type ApiVehicle, type ApiVehicleResponse } from "@shared/schema";
 
 interface VehicleWithCustomerName extends Omit<ApiVehicle, 'customer_id' | 'color' | 'chassis' | 'tracker_serial' | 'is_tracking'> {
@@ -14,7 +14,7 @@ interface VehicleWithCustomerName extends Omit<ApiVehicle, 'customer_id' | 'colo
 }
 
 export default function Vehicles() {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<ApiVehicle | null>(null);
@@ -32,7 +32,7 @@ export default function Vehicles() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
+      alert({
         title: "Veículo deletado",
         description: "Veículo removido com sucesso!",
       });
@@ -40,7 +40,7 @@ export default function Vehicles() {
       setVehicleToDelete(null);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao deletar veículo",
         description: error.message,
         variant: "destructive",
@@ -83,7 +83,7 @@ export default function Vehicles() {
       customerName: vehicle.customer_name || "-",
       trackerSerial: normalized.tracker_serial || "-",
       status: normalized.status,
-      isTracking: normalized.is_tracking,
+      isTracking: normalized.is_tracking || false,
     };
   }) : [];
 

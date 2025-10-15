@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import { type ApiVehicle } from "@shared/schema";
 import {
   Dialog,
@@ -58,7 +58,7 @@ export function VehicleFormDialog({
   vehicleId,
   initialData,
 }: VehicleFormDialogProps) {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const isEditing = !!vehicleId;
 
   // Buscar lista de clientes para o select
@@ -122,7 +122,7 @@ export function VehicleFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
+      alert({
         title: "Veículo criado",
         description: "Veículo cadastrado com sucesso!",
       });
@@ -130,7 +130,7 @@ export function VehicleFormDialog({
       form.reset();
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao criar veículo",
         description: error.message,
         variant: "destructive",
@@ -145,14 +145,14 @@ export function VehicleFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
+      alert({
         title: "Veículo atualizado",
         description: "Veículo atualizado com sucesso!",
       });
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao atualizar veículo",
         description: error.message,
         variant: "destructive",

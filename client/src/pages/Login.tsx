@@ -2,12 +2,12 @@ import { LoginForm } from "@/components/LoginForm";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 
 export default function Login() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function Login() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro ao fazer login";
       setLoginError(errorMessage);
-      toast({
+      alert({
         title: "Erro no login",
         description: errorMessage,
         variant: "destructive",

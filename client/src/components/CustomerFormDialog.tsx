@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import {
   Dialog,
   DialogContent,
@@ -58,7 +58,7 @@ export function CustomerFormDialog({
   customerId,
   initialData,
 }: CustomerFormDialogProps) {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   const isEditing = !!customerId;
 
   const form = useForm<CustomerFormData>({
@@ -130,7 +130,7 @@ export function CustomerFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
+      alert({
         title: "Cliente criado",
         description: "Cliente cadastrado com sucesso!",
       });
@@ -138,7 +138,7 @@ export function CustomerFormDialog({
       form.reset();
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao criar cliente",
         description: error.message,
         variant: "destructive",
@@ -168,14 +168,14 @@ export function CustomerFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
+      alert({
         title: "Cliente atualizado",
         description: "Cliente atualizado com sucesso!",
       });
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao atualizar cliente",
         description: error.message,
         variant: "destructive",

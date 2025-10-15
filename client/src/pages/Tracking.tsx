@@ -1,12 +1,12 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { VehicleMap } from "@/components/VehicleMap";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAlert } from "@/hooks/use-alert";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Tracking() {
-  const { toast } = useToast();
+  const { alert } = useAlert();
   
   const { data: response, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/tracking/vehicles"],
@@ -21,13 +21,13 @@ export default function Tracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tracking/vehicles"] });
-      toast({
+      alert({
         title: "Veículo bloqueado",
         description: "Veículo bloqueado com sucesso!",
       });
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao bloquear veículo",
         description: error.message,
         variant: "destructive",
@@ -41,13 +41,13 @@ export default function Tracking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tracking/vehicles"] });
-      toast({
+      alert({
         title: "Veículo desbloqueado",
         description: "Veículo desbloqueado com sucesso!",
       });
     },
     onError: (error: Error) => {
-      toast({
+      alert({
         title: "Erro ao desbloquear veículo",
         description: error.message,
         variant: "destructive",
