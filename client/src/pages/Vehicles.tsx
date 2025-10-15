@@ -20,7 +20,7 @@ export default function Vehicles() {
   const [selectedVehicle, setSelectedVehicle] = useState<ApiVehicle | null>(null);
   const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
   
-  const { data: response, isLoading, error } = useQuery<{ vehicles: ApiVehicle[] | null }>({
+  const { data: response, isLoading, error } = useQuery<{ vehicles: ApiVehicleResponse[] | null }>({
     queryKey: ["/api/vehicles"],
   });
   
@@ -95,7 +95,8 @@ export default function Vehicles() {
   const handleEdit = (id: string) => {
     const vehicle = vehicles?.find((v) => v.id === id);
     if (vehicle) {
-      setSelectedVehicle(vehicle);
+      const normalized = normalizeVehicleData(vehicle);
+      setSelectedVehicle(normalized);
       setDialogOpen(true);
     }
   };
