@@ -319,6 +319,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rotas de bloqueio/desbloqueio
+  app.post("/api/vehicles/:id/block", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.blockVehicle(req.params.id, token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data || { message: "Veículo bloqueado com sucesso" });
+    } catch (error) {
+      console.error("Block vehicle error:", error);
+      res.status(500).json({ error: "Erro ao bloquear veículo" });
+    }
+  });
+
+  app.post("/api/vehicles/:id/unblock", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const token = (req as any).token;
+      const response = await apiClient.unblockVehicle(req.params.id, token);
+      
+      if (response.error) {
+        return res.status(response.status).json({ error: response.error });
+      }
+      
+      res.json(response.data || { message: "Veículo desbloqueado com sucesso" });
+    } catch (error) {
+      console.error("Unblock vehicle error:", error);
+      res.status(500).json({ error: "Erro ao desbloquear veículo" });
+    }
+  });
+
   // ========== ROTAS DE RASTREAMENTO ==========
   
   app.get("/api/tracking/vehicles", requireAuth, async (req: Request, res: Response) => {
