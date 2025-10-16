@@ -23,13 +23,15 @@ cd vehicle-tracking-portal
 
 ## 🔧 Passo 2: Instalar Dependências
 
-Abra o terminal na pasta do projeto e execute:
+Abra o terminal (CMD, PowerShell ou Git Bash) na pasta do projeto e execute:
 
 ```bash
 npm install
 ```
 
 Isso vai instalar todas as bibliotecas necessárias.
+
+> **💡 Nota para Windows:** O projeto já está configurado com `cross-env` para funcionar perfeitamente no Windows!
 
 ## 🗄️ Passo 3: Configurar o Banco de Dados
 
