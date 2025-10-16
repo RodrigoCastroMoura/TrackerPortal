@@ -17,6 +17,7 @@ interface VehicleLocation {
   status: "active" | "blocked" | "idle";
   speed: number;
   lastUpdate: string;
+  address?: string;
 }
 
 interface VehicleMapProps {
@@ -71,6 +72,95 @@ function createCustomIcon(status: "active" | "blocked" | "idle") {
   });
 }
 
+// Hook para buscar endereço baseado em coordenadas
+function useReverseGeocode(lat: number, lng: number) {
+  const [address, setAddress] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function fetchAddress() {
+      if (!lat || !lng) return;
+      
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              'Accept-Language': 'pt-BR,pt;q=0.9',
+            }
+          }
+        );
+        const data = await response.json();
+        
+        if (data.display_name) {
+          setAddress(data.display_name);
+        } else {
+          setAddress("Endereço não disponível");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar endereço:", error);
+        setAddress("Erro ao carregar endereço");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAddress();
+  }, [lat, lng]);
+
+  return { address, loading };
+}
+
+// Componente de popup customizado
+function VehiclePopup({ vehicle }: { vehicle: VehicleLocation }) {
+  const { address, loading } = useReverseGeocode(vehicle.lat, vehicle.lng);
+
+  return (
+    <div className="p-2 min-w-[250px]">
+      <p className="font-mono font-semibold text-lg">{vehicle.plate}</p>
+      <p className="text-sm text-gray-600 mb-2">{vehicle.customerName}</p>
+      
+      <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-200">
+        <div className="flex items-start gap-2">
+          <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-700 mb-1">Localização:</p>
+            {loading ? (
+              <p className="text-xs text-gray-500 italic">Carregando endereço...</p>
+            ) : (
+              <p className="text-xs text-gray-600 break-words">{address}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-gray-500">Velocidade:</span>
+        <Badge variant="outline" className="text-xs">
+          {vehicle.speed} km/h
+        </Badge>
+      </div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-gray-500">Status:</span>
+        <Badge 
+          variant={
+            vehicle.status === "active" ? "default" :
+            vehicle.status === "blocked" ? "destructive" : "secondary"
+          }
+          className="text-xs"
+        >
+          {vehicle.status === "active" ? "Ativo" :
+           vehicle.status === "blocked" ? "Bloqueado" : "Parado"}
+        </Badge>
+      </div>
+      <p className="text-xs text-gray-500 mt-2">
+        Atualizado: {vehicle.lastUpdate}
+      </p>
+    </div>
+  );
+}
+
 export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: VehicleMapProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleLocation | null>(null);
   
@@ -119,32 +209,7 @@ export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: Ve
                       }}
                     >
                       <Popup>
-                        <div className="p-2 min-w-[200px]">
-                          <p className="font-mono font-semibold text-lg">{vehicle.plate}</p>
-                          <p className="text-sm text-gray-600 mb-2">{vehicle.customerName}</p>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-gray-500">Velocidade:</span>
-                            <Badge variant="outline" className="text-xs">
-                              {vehicle.speed} km/h
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-gray-500">Status:</span>
-                            <Badge 
-                              variant={
-                                vehicle.status === "active" ? "default" :
-                                vehicle.status === "blocked" ? "destructive" : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {vehicle.status === "active" ? "Ativo" :
-                               vehicle.status === "blocked" ? "Bloqueado" : "Parado"}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Atualizado: {vehicle.lastUpdate}
-                          </p>
-                        </div>
+                        <VehiclePopup vehicle={vehicle} />
                       </Popup>
                     </Marker>
                   ))}

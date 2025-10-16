@@ -17,6 +17,7 @@ A comprehensive vehicle tracking management system built as a web application fo
 - **Map Visualization**: Sistema usa dados reais da API quando disponíveis. Quando API retorna localização null (sem dados GPS), usa coordenadas de demonstração em Brasília para visualização
 - **Tracking Logic**: Verifica dados reais com `!= null` (não com truthiness) para aceitar coordenadas válidas com valor 0 (equador/meridiano)
 - **Modal Dialogs**: Z-index configurado para 9999 para garantir que modais apareçam acima do mapa Leaflet (que usa z-index ~400)
+- **Reverse Geocoding**: Popup dos marcadores mostra endereço obtido via Nominatim API (OpenStreetMap) usando geocodificação reversa das coordenadas lat/lng
 
 ## User Preferences
 
