@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Navigation, Lock, Unlock, Circle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import "leaflet/dist/leaflet.css";
 
 interface VehicleLocation {
@@ -163,10 +173,30 @@ function VehiclePopup({ vehicle }: { vehicle: VehicleLocation }) {
 
 export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: VehicleMapProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleLocation | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    action: 'lock' | 'unlock';
+    vehicleId: string;
+    vehiclePlate: string;
+  }>({
+    open: false,
+    action: 'lock',
+    vehicleId: '',
+    vehiclePlate: '',
+  });
   
   const defaultCenter: [number, number] = vehicles.length > 0 
     ? [vehicles[0].lat, vehicles[0].lng]
     : [-15.7939, -47.8828];
+
+  const handleConfirmAction = () => {
+    if (confirmDialog.action === 'lock') {
+      onLockVehicle?.(confirmDialog.vehicleId);
+    } else {
+      onUnlockVehicle?.(confirmDialog.vehicleId);
+    }
+    setConfirmDialog({ open: false, action: 'lock', vehicleId: '', vehiclePlate: '' });
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -271,7 +301,12 @@ export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: Ve
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onUnlockVehicle?.(vehicle.id);
+                                setConfirmDialog({
+                                  open: true,
+                                  action: 'unlock',
+                                  vehicleId: vehicle.id,
+                                  vehiclePlate: vehicle.plate,
+                                });
                               }}
                               data-testid={`button-unlock-${vehicle.id}`}
                             >
@@ -284,7 +319,12 @@ export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: Ve
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onLockVehicle?.(vehicle.id);
+                                setConfirmDialog({
+                                  open: true,
+                                  action: 'lock',
+                                  vehicleId: vehicle.id,
+                                  vehiclePlate: vehicle.plate,
+                                });
                               }}
                               data-testid={`button-lock-${vehicle.id}`}
                             >
@@ -302,6 +342,31 @@ export function VehicleMap({ vehicles = [], onLockVehicle, onUnlockVehicle }: Ve
           </ScrollArea>
         </Card>
       </div>
+
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog.action === 'lock' ? 'Confirmar Bloqueio' : 'Confirmar Desbloqueio'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.action === 'lock' 
+                ? `Tem certeza que deseja BLOQUEAR o veículo ${confirmDialog.vehiclePlate}? Esta ação impedirá o funcionamento do veículo.`
+                : `Tem certeza que deseja DESBLOQUEAR o veículo ${confirmDialog.vehiclePlate}? O veículo voltará a funcionar normalmente.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmAction}
+              className={confirmDialog.action === 'lock' ? 'bg-destructive hover:bg-destructive/90' : ''}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

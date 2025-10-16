@@ -188,11 +188,11 @@ class ApiClient {
   }
 
   async blockVehicle(id: string, token?: string) {
-    return this.post(`/api/vehicles/${id}/block`, { comando: "bloquear" }, token);
+    return this.post(`/api/vehicles/${id}/block`, { comando: "bloquear/desbloquear" }, token);
   }
 
   async unblockVehicle(id: string, token?: string) {
-    return this.post(`/api/vehicles/${id}/unblock`, { comando: "desbloquear" }, token);
+    return this.post(`/api/vehicles/${id}/block`, { comando: "bloquear/desbloquear" }, token);
   }
 
   async searchVehicles(q: string, page = 1, per_page = 10, token?: string) {
