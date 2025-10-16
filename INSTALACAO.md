@@ -101,10 +101,14 @@ A API externa está em: `https://tracker-api-rodrigocastrom1.replit.app`
 - Teste a conexão: `psql -U postgres -d vehicle_tracking`
 
 ### Porta 5000 já em uso
-Se a porta 5000 estiver ocupada, você pode mudar no arquivo `server/index.ts`:
-```javascript
-const PORT = process.env.PORT || 5000; // mude 5000 para outra porta
+Se a porta 5000 estiver ocupada, você pode mudar criando um arquivo `.env` com:
+```env
+PORT=3000
 ```
+Ou qualquer outra porta disponível.
+
+### Erro "ENOTSUP: operation not supported" no Windows
+✅ **Este erro já foi corrigido!** O servidor agora detecta automaticamente se está rodando no Windows e usa `localhost` ao invés de `0.0.0.0`.
 
 ### Erro ao instalar dependências
 - Limpe o cache: `npm cache clean --force`
